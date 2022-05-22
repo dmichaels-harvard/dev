@@ -1,11 +1,11 @@
 #!/bin/bash
-# -----------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 # Deletes a pyenv virtualenv ENTIRELY!
 #
 # Usage: pyenv-delete.sh your-virtualenv-name
 # Will not let you delete if the specified virtualenv is currently active.
 # Prompts before actually deleting the ~/.pyenv virtualenv symlink/directory.
-# -----------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 
 if [ $# -ne 1 ]; then
     echo "usage: pyenv-delete virtualenv-name"
