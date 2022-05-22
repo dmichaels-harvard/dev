@@ -1,10 +1,10 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------
-# Delete pyenv virtualenv ENTIRELY!
+# Deletes a pyenv virtualenv ENTIRELY!
 #
 # Usage: pyenv-delete.sh your-virtualenv-name
 # Will not let you delete if the specified virtualenv is currently active.
-# Prompts before actually deleting the ~/.pyenv symlinks/directories.
+# Prompts before actually deleting the ~/.pyenv virtualenv symlink/directory.
 # -----------------------------------------------------------------------------
 
 if [ $# -ne 1 ]; then
@@ -28,7 +28,7 @@ PYENV_DIR=${PYENV_ROOT:-~/.pyenv}
 # ~/.pyenv/versions/3.8.12/envs/myenv (directory)
 #
 # We do case-insensitive string compare here (must be better way)
-# because pyenv seems to be case insensitive ...
+# because pyenv does seem to be case insensitive ...
 #
 if [ ! -z "${PYENV_VERSION}" -a "`echo ${PYENV_VERSION} | tr '[:upper:]' '[:lower:]'`" == "`echo ${ENV_TO_DELETE} | tr '[:upper:]' '[:lower:]'`" ]; then
     echo "This is your current pyenv virtualenv: ${PYENV_VERSION}"
@@ -37,8 +37,8 @@ if [ ! -z "${PYENV_VERSION}" -a "`echo ${PYENV_VERSION} | tr '[:upper:]' '[:lowe
     exit 2
 fi
 
-# For each directory D in ~/.pyenv/versions/ which is NOT a symlink,
-# look for D/ENV_TO_DELETE
+# For each directory in ~/.pyenv/versions/ which is NOT a symlink,
+# look for the specified virtualenv to delete (ENV_TO_DELETE0.
 
 ENV_DIR_TO_DELETE=
 ENV_SYMLINK_TO_DELETE=
@@ -75,25 +75,21 @@ if [ -z "${ENV_DIR_TO_DELETE}" -o -z "${ENV_SYMLINK_TO_DELETE}" ]; then
 fi
 
 echo "Deleting pyenv virtualenv: ${ENV_TO_DELETE}"
-
 echo "Ready to delete directory: ${ENV_DIR_TO_DELETE}"
 echo "Ready to delete symlink:   ${ENV_SYMLINK_TO_DELETE}"
 
 read -p "Do you want to proceed? (yes|no) " yn
 case $yn in 
-	yes )
-            echo -n "OK deleting ... "
-            rm -rf ${ENV_DIR_TO_DELETE} ${ENV_SYMLINK_TO_DELETE}
-            RM_STATUS=$#
-            echo "Done."
-            exit ${RM_STATUS}
-            ;;
-	no  )
-            echo "Exiting without doing anything."
-            exit 5
-            ;;
-	*   )
-            echo "Exiting without doing anything."
-            exit 6
-            ;;
+	yes ) echo -n "OK deleting ... "
+          rm -rf ${ENV_DIR_TO_DELETE} ${ENV_SYMLINK_TO_DELETE}
+          RM_STATUS=$#
+          echo "Done."
+          exit ${RM_STATUS}
+          ;;
+	no  ) echo "Exiting without doing anything."
+          exit 5
+          ;;
+	*   ) echo "Exiting without doing anything."
+          exit 6
+          ;;
 esac
