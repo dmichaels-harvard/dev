@@ -5,6 +5,12 @@
 # Usage: pyenv-delete.sh your-virtualenv-name
 # Will not let you delete if the specified virtualenv is currently active.
 # Prompts before actually deleting the ~/.pyenv virtualenv symlink/directory.
+# Perhaps there is a pyenv way of doing this but have not been able to find it.
+#
+# NEVERMIND!
+# Hadn't been able to find a pyenv way of doing this but then I did ...
+# Simply: pyenv virtualenv-delete your-virtualenv-name
+# So no need for this script!
 # --------------------------------------------------------------------------------------------------
 
 if [ $# -ne 1 ]; then
