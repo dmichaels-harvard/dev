@@ -4,4 +4,4 @@
 # usage: ff.sh search_string [file_pattern] [--dryrun] [--exclude directory_names_to_exclude...]
 # --------------------------------------------------------------------------------------------------
 
-~/bin/f.sh --grep 'fgrep -i' "$@"
+~/bin/f.sh --grep 'grep -i' "$@"

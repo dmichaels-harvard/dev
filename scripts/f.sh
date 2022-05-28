@@ -1,15 +1,30 @@
 #!/bin/bash
 # --------------------------------------------------------------------------------------------------
 # My simple common find tool.
-# usage: f.sh search_string [file_pattern] [--dryrun] [--exclude directory_names_to_exclude...]
+#
+# usage: f.sh search_string [file_pattern]
+#             [--text]
+#             [--dryrun]
+#             [--exclude directory_names_to_exclude...]
+#
+# The --text option turns on the grep -I option which skips binary files.
+# The --exclude option can be used to list one or more directory names to skip in the search.
+# The --dry option can be used to just to see the find command that would be run.
 # --------------------------------------------------------------------------------------------------
 
+THIS_SCRIPT_NAME=`basename $0`
+
 function usage() {
-    echo "usage: f.sh search_string [file_pattern] [--exclude directory_names_to_exclude...]"
+    echo "usage: ${THIS_SCRIPT_NAME}"
+    echo "       search_string [file_pattern]"
+    echo "       [--text]"
+    echo "       [--dryrun]"
+    echo "       [--exclude directory_names_to_exclude...]"
     exit 1
 }
 
-GREP='fgrep'
+GREP='grep'
+TEXT_FILES_ONLY=
 SEARCH_FOR=
 FILE_PATTERN=
 EXCLUDE_OPTION=
@@ -32,7 +47,16 @@ while [ $# -gt 0 ]; do
         fi
         GREP=$2
         shift 2
-    elif [ "$1" = "--exclude" -o "$1" = "-exclude" -o "$1" = "--excludes" -o "$1" = "-excludes" -o "$1" = "-x" ]; then
+    elif [ "$1" = "--text" -o "$1" = "--text" -o "$1" = "--t" -o "$1" = "-t" ]; then
+        TEXT_FILES_ONLY="-I"
+        shift 1
+    elif [ "$1" = "--py" -o "$1" = "-py" ]; then
+        #
+        # Just a shortcut for specifying "*.py" for the file pattern.
+        #
+        FILE_PATTERN="-name \"*.py\""
+        shift 1
+    elif [ "$1" = "--exclude" -o "$1" = "-exclude" -o "$1" = "--excludes" -o "$1" = "-excludes" -o "$1" = "--x"  -o "$1" = "-x" ]; then
         #
         # Get the directories to exclude from the find.
         #
@@ -82,12 +106,13 @@ if [ -z "$SEARCH_FOR"  ]; then
     usage
 fi
 
-COMMAND="find . -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP -H \"$SEARCH_FOR\" {} \;"
+COMMAND="find . -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP $TEXT_FILES_ONLY -H \"$SEARCH_FOR\" {} \;"
 
 if [ ! -z $DEBUG ]; then
     echo "SEARCH_FOR:[${SEARCH_FOR}]"
     echo "FILE_PATTERN:[${FILE_PATTERN}]"
     echo "EXCLUDE_DIRS:[${EXCLUDE_DIRS}]"
+    echo "TEXT_FILES_ONLY:[${TEXT_FILES_ONLY}]"
     echo "DRYRUN:[${DRYRUN}]"
     echo "COMMAND:[${COMMAND}]"
     exit 1
