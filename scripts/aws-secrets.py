@@ -23,11 +23,11 @@ args_parser.add_argument("--secrets", action="store_true", required=False)
 args_parser.add_argument("--show", action="store_true", required=False)
 args = args_parser.parse_args()
 
-def looks_like_secret_key_name(key: str) -> bool:
+def should_obfuscate_secret(key: str) -> bool:
     key = key.lower()
-    if "secret" in key or "password" in key or "passwd" in key:
-        return True
-    return False
+    return "secret" in key or "password" in key or "passwd" in key or "crypt" in key
+
+    return x
 
 def obfuscate(value: str) -> str:
     return value[0:1] + "*******"
@@ -45,9 +45,9 @@ def print_aws_secrets():
                 if args.secret and not args.secret.lower() in secret_key.lower():
                     continue
                 secret_value = secret_value_json[secret_key]
-                if not args.show and looks_like_secret_key_name(secret_key):
-                    print(f"- {secret_key}: {obfuscate(secret_value)}")
-                else:
-                    print(f"- {secret_key}: {secret_value}")
+                secret_value = obfuscate(secret_value) \
+                               if not args.show \
+                                  and should_obfuscate_secret(secret_key) else secret_value
+                print(f"- {secret_key}: {secret_value}")
 
 print_aws_secrets()
