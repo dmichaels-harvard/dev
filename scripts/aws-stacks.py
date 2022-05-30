@@ -23,35 +23,37 @@ args_parser.add_argument("--stack", type=str, required=False)
 args_parser.add_argument("--output", type=str, required=False)
 args_parser.add_argument("--outputs", action="store_true", required=False)
 args_parser.add_argument("--exports", action="store_true", required=False)
-args_parser.add_argument("--verbose", action="store_true", required=False)
 args = args_parser.parse_args()
 
-c4 = boto3.client('cloudformation')
+def print_aws_stacks():
 
-print("AWS Stacks", end = "")
-if args.stack:
-    print(" / stack name containing: " + args.stack, end = "")
-if args.output:
-    print(" / output keys containing: " + args.output, end = "")
-print()
+    print("AWS Stacks", end = "")
+    if args.stack:
+        print(" / stack name containing: " + args.stack, end = "")
+    if args.output:
+        print(" / output keys containing: " + args.output, end = "")
+    print()
 
-for stack in c4.describe_stacks()["Stacks"]:
-    stack_name = stack["StackName"]
-    if args.stack and not args.stack.lower() in stack_name.lower():
-        continue
-    stack_updated = stack["LastUpdatedTime"]
-    print("%-15s (updated: %s)" % (stack_name, stack_updated.astimezone().strftime("%Y:%m:%d %H:%M:%S")))
-    if args.output or args.outputs:
-        for stack_output in sorted(stack["Outputs"], key=lambda key: key["OutputKey"]):
-            stack_output_key = stack_output["OutputKey"]
-            if args.output and not args.output.lower() in stack_output_key.lower():
-                continue
-            stack_output_value = stack_output["OutputValue"]
-            stack_output_export_name = stack_output.get("ExportName")
-            print(" - %s:" % (stack_output_key))
-            print("   %s" % (stack_output_value))
-            if args.exports and stack_output_export_name:
-                print("   %s (export name)" % (stack_output_export_name))
+    c4 = boto3.client('cloudformation')
+    for stack in c4.describe_stacks()["Stacks"]:
+        stack_name = stack["StackName"]
+        if args.stack and not args.stack.lower() in stack_name.lower():
+            continue
+        stack_updated = stack["LastUpdatedTime"]
+        print("%-15s (updated: %s)" % (stack_name, stack_updated.astimezone().strftime("%Y:%m:%d %H:%M:%S")))
+        if args.output or args.outputs:
+            for stack_output in sorted(stack["Outputs"], key=lambda key: key["OutputKey"]):
+                stack_output_key = stack_output["OutputKey"]
+                if args.output and not args.output.lower() in stack_output_key.lower():
+                    continue
+                stack_output_value = stack_output["OutputValue"]
+                stack_output_export_name = stack_output.get("ExportName")
+                print(" - %s:" % (stack_output_key))
+                print("   %s" % (stack_output_value))
+                if args.exports and stack_output_export_name:
+                    print("   %s (export name)" % (stack_output_export_name))
+
+print_aws_stacks()
 
 
 
