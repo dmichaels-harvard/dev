@@ -60,7 +60,8 @@ def print_aws_secrets():
                 secret_value = secret_value_json[secret_key]
                 secret_value = obfuscate(secret_value) \
                                if not args.show \
-                                  and should_obfuscate_secret(secret_key) else secret_value
+                                  and should_obfuscate_secret(secret_key) \
+                                 else secret_value
                 print(f"- {secret_key}: {secret_value}")
 
 if __name__ == "__main__":
