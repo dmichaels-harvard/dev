@@ -2,7 +2,7 @@
 # Simple script to view AWS stacks and related info.
 # By default prints all stacks, and optionally all associated Outputs key/values.
 #
-# usage: aws-stacks [--stack stack-name-pattern] [--output output-key-pattern ] [--outputs]
+# usage: aws-stacks [--stack stack-name-pattern] [--output output-key-pattern ] [--outputs] [--exports]
 #
 # If --outputs is given then prints all outputs key/values for each stack.
 #

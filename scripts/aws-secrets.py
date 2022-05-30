@@ -2,6 +2,8 @@
 # Simple script to view AWS secrets info.
 # By default prints all secrets names.
 #
+# usage: aws-secrets [--secret secret-name-pattern] [--secrets] [--show]
+#
 # If --secrets is given then the secret keys/values are printed for each secret.
 # Secret values with names that look senstive ("secret" or "password" etc) are obfuscated.
 #
