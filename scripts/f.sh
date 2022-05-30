@@ -1,6 +1,7 @@
 #!/bin/bash
 # --------------------------------------------------------------------------------------------------
-# My simple common find tool.
+# My very simple common find tool.
+# Ignore-case and/or as-word versions are in: ff.sh, fw.sh, ffw.sh
 #
 # usage: f.sh search_string [file_pattern]
 #             [--text]
