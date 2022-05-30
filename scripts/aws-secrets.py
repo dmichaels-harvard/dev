@@ -6,7 +6,7 @@
 #
 # If --name with a simple pattern is given then limit secrets to those
 # whose name contains the specified simple pattern (case-insensitive).
-
+#
 # If --secrets is given then the secret keys/values are printed for each secret.
 # Secret values with names that look senstive ("secret" or "password" etc) are obfuscated.
 #
