@@ -31,8 +31,6 @@ def should_obfuscate_secret(key: str) -> bool:
     key = key.lower()
     return "secret" in key or "password" in key or "passwd" in key or "crypt" in key
 
-    return x
-
 def obfuscate(value: str) -> str:
     return value[0:1] + "*******" if value is not None and len(value) > 0 else ""
 
