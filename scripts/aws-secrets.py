@@ -56,10 +56,8 @@ def print_aws_secrets():
                 if args.secret and not args.secret.lower() in secret_key.lower():
                     continue
                 secret_value = secret_value_json[secret_key]
-                secret_value = obfuscate(secret_value) \
-                               if not args.show \
-                                  and should_obfuscate_secret(secret_key) \
-                                 else secret_value
+                if should_obfuscate_secret(secret_key) and not args.show:
+                    secret_value = obfuscate(secret_value)
                 print(f"- {secret_key}: {secret_value}")
 
 if __name__ == "__main__":
