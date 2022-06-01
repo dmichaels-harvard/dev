@@ -99,6 +99,10 @@ def print_aws_secrets(secret_name_pattern: str = None, secret_key_name_pattern: 
 if __name__ == "__main__":
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("--name", type=str, required=False)
+    #
+    # How can we make --secret take an *option* argument,
+    # so we can not have both '--secrets' and '--secret pattern'?
+    #
     args_parser.add_argument("--secret", type=str, required=False)
     args_parser.add_argument("--secrets", action="store_true", required=False)
     args_parser.add_argument("--show", action="store_true", required=False)

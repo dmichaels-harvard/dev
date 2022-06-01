@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------------------------------------
 # Simple script to view AWS stacks and related info.
 # By default prints all stacks, and optionally all associated Outputs key/values.
+# TODO: Use regex for pattern rather than just simple contains.
 #
 # usage: aws-stacks [--name stack-name-pattern]
 #                   {
@@ -117,22 +118,3 @@ def print_aws_stacks():
 
 if __name__ == "__main__":
     print_aws_stacks()
-
-
-
-
-
-#JUNK...
-#c4 = boto3.resource('cloudformation')
-#stacks = c4.meta.client.list_stacks()
-#for stack in stacks:
-#    print(stack)
-#print("All AWS Stacks:")
-# This way oes not give 'ExportName' properties of Outputs.
-#for stack in c4.stacks.all():
-#    print("%-15s %s" % (stack.name, stack.last_updated_time.astimezone().strftime("%Y:%m:%d %H:%M:%S")))
-#    if len(stack.outputs) > 0:
-#        print("Outputs (%d):" % len(stack.outputs))
-#        print(stack.outputs)
-#        for stack_output in sorted(stack.outputs, key=lambda key: key["OutputKey"]):
-#            print(" - %s: %s" % (stack_output["OutputKey"], stack_output["OutputValue"]))
