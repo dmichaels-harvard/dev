@@ -24,14 +24,7 @@ import boto3
 import json
 import re
 
-args_parser = argparse.ArgumentParser()
-args_parser.add_argument("--name", type=str, required=False)
-args_parser.add_argument("--secret", type=str, required=False)
-args_parser.add_argument("--secrets", action="store_true", required=False)
-args_parser.add_argument("--show", action="store_true", required=False)
-args = args_parser.parse_args()
-
-def print_aws_secrets():
+def print_aws_secrets(secret_name_pattern = None, secret_key_name_pattern = None, show = False):
     """
     Prints AWS secrets for the currently active AWS credential.
     """
@@ -52,31 +45,45 @@ def print_aws_secrets():
     def obfuscate(value: str) -> str:
         return value[0:1] + "*******" if value is not None and len(value) > 0 else ""
 
+    if secret_name_pattern and secret_name_pattern.startswith("*"):
+        secret_name_pattern = ".*" + secret_name_pattern[1:]
+    if secret_key_name_pattern and secret_key_name_pattern.startswith("*"):
+        secret_key_name_pattern = ".*" + secret_key_name_pattern[1:]
+
     aws_access_key = boto3.Session().get_credentials().access_key
 
     print("AWS Secrets (%s)" % aws_access_key, end = "")
-    if args.name:
-        print(" / name containing: " + args.name, end = "")
-    if args.secret:
-        print(" / secret keys containing: " + args.secret, end = "")
+    if secret_name_pattern:
+        print(" / name contains: " + secret_name_pattern, end = "")
+    if secret_key_name_pattern:
+        print(" / secret keys contains: " + secret_key_name_pattern, end = "")
     print("")
 
     c4 = boto3.client('secretsmanager')
     for secret in sorted(c4.list_secrets()["SecretList"], key=lambda key: key["Name"].lower()):
         secret_name = secret["Name"]
-        if args.name and not args.name.lower() in secret_name.lower():
+        if secret_name_pattern and not re.search(secret_name_pattern, secret_name, re.IGNORECASE):
             continue
         print(secret_name)
-        if args.secret or args.secrets:
+        if secret_key_name_pattern:
             secret_value = c4.get_secret_value(SecretId=secret_name)
             secret_value_json = json.loads(secret_value["SecretString"])
             for secret_key in sorted(secret_value_json.keys(), key=lambda key: key.lower()):
-                if args.secret and not args.secret.lower() in secret_key.lower():
+                if not re.search(secret_key_name_pattern, secret_key, re.IGNORECASE):
                     continue
                 secret_value = secret_value_json[secret_key]
-                if should_obfuscate_secret(secret_key) and not args.show:
+                if should_obfuscate_secret(secret_key) and not show:
                     secret_value = obfuscate(secret_value)
                 print(f"- {secret_key}: {secret_value}")
 
 if __name__ == "__main__":
-    print_aws_secrets()
+    args_parser = argparse.ArgumentParser()
+    args_parser.add_argument("--name", type=str, required=False)
+    args_parser.add_argument("--secret", type=str, required=False)
+    args_parser.add_argument("--secrets", action="store_true", required=False)
+    args_parser.add_argument("--show", action="store_true", required=False)
+    args = args_parser.parse_args()
+    secret_key_name_pattern = args.secret
+    if not secret_key_name_pattern and args.secrets:
+        secret_key_name_pattern = ".*"
+    print_aws_secrets(secret_name_pattern=args.name, secret_key_name_pattern=secret_key_name_pattern, show=args.show)
