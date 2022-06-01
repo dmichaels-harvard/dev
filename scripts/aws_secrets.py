@@ -105,7 +105,7 @@ def print_aws_secrets(secret_name_pattern: str = None, secret_key_name_pattern: 
                     secret_value = obfuscate(secret_value)
                 print(f"- {secret_key_name}: {secret_value}")
 
-if __name__ == "__main__":
+def main():
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("--name", type=str, required=False)
     #
@@ -120,3 +120,6 @@ if __name__ == "__main__":
     if not secret_key_name_pattern and args.secrets:
         secret_key_name_pattern = ".*"
     print_aws_secrets(secret_name_pattern=args.name, secret_key_name_pattern=secret_key_name_pattern, show=args.show)
+
+if __name__ == "__main__":
+    main()

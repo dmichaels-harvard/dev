@@ -117,5 +117,8 @@ def print_aws_stacks():
                     # print(" - %s:" % (stack_parameter_key))
                     # print("   %s" % (stack_parameter_value))
 
-if __name__ == "__main__":
+def main():
     print_aws_stacks()
+
+if __name__ == "__main__":
+    main()

@@ -31,6 +31,9 @@ def print_aws_stack_template(stack_name):
         #
         print(stack_template_body)
 
-if __name__ == "__main__":
+def main():
     stack_name = sys.argv[1]
     print_aws_stack_template(stack_name)
+
+if __name__ == "__main__":
+    main()
