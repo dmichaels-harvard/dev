@@ -1,6 +1,7 @@
 # --------------------------------------------------------------------------------------------------
 # Simple script to view AWS secrets info.
-# By default prints just (all) the name of the secrets names available,
+#
+# By default prints just (all) the names of the secrets available,
 # e.g. C4DatastoreCgapSupertestApplicationConfiguration. Use the --secrets
 # option to see the actualy secret keys/values for each secret name.
 # Values are obfuscated if they look like they represent true secrets.
@@ -24,12 +25,28 @@ import boto3
 import json
 import re
 
-def print_aws_secrets(secret_name_pattern = None, secret_key_name_pattern = None, show = False):
+def print_aws_secrets(secret_name_pattern: str = None, secret_key_name_pattern: str = None, show: bool = False):
     """
-    Prints AWS secrets for the currently active AWS credential.
+    Prints (to stdout) AWS secrets for the currently active AWS credentials.
+
+    By default prints just (all) the *names* of the secrets available,
+    e.g. C4DatastoreCgapSupertestApplicationConfiguration. Use :param:`secret_name_pattern`
+    to limit the secret names. Use :param:`secret_key_name_pattern` set to '*' or to some
+    pattern to either print all secret keys/values (for each secret name) or to limit
+    to those matching that pattern. Secret values with key name which look secret will
+    be obfuscated by default; use :param:`show` to print them in plaintext.
+
+    :param secret_name_pattern: If None then prints all secrets name,
+      otherwise only those that contain the given pattern.
+    :param secret_key_name_pattern: If None then does not print any secret keys/values;
+      otherwise prints only those that contain the given pattern; use '*' for all.
+    :param show: If False then obfuscates secret values with key name that look secret,
+      e.g. containing 'password' or 'secret', otherwise prints all values in plaintext.
     """
 
-    SECRET_KEY_NAMES = [ ".*secret.*", ".*secrt.*", ".*password.*", ".*passwd.*", ".*crypt.*" ]
+    # Adjust/amend this as necessary.
+    #
+    SECRET_KEY_NAMES_FOR_OBFUSCATION = [ ".*secret.*", ".*secrt.*", ".*password.*", ".*passwd.*", ".*crypt.*" ]
 
     def should_obfuscate_secret(key: str) -> bool:
         """
@@ -39,12 +56,15 @@ def print_aws_secrets(secret_name_pattern = None, secret_key_name_pattern = None
         in the secret_key_names list, which can be a regular expression.
         Add more to secret_key_names if/when needed.
         """
-        secret_key_names_regex = map(lambda regex: re.compile(regex, re.IGNORECASE), SECRET_KEY_NAMES)
+        secret_key_names_regex = map(lambda regex: re.compile(regex, re.IGNORECASE), SECRET_KEY_NAMES_FOR_OBFUSCATION)
         return any(regex.match(key) for regex in secret_key_names_regex)
 
     def obfuscate(value: str) -> str:
         return value[0:1] + "*******" if value is not None and len(value) > 0 else ""
 
+    # Just to allow simple '*' (at the beginning, or alone) as the patterns for convenience.
+    # otherwise get: re.error: nothing to repeat at position 0
+    #
     if secret_name_pattern and secret_name_pattern.startswith("*"):
         secret_name_pattern = ".*" + secret_name_pattern[1:]
     if secret_key_name_pattern and secret_key_name_pattern.startswith("*"):
@@ -53,9 +73,9 @@ def print_aws_secrets(secret_name_pattern = None, secret_key_name_pattern = None
     aws_access_key = boto3.Session().get_credentials().access_key
 
     print("AWS Secrets (%s)" % aws_access_key, end = "")
-    if secret_name_pattern:
+    if secret_name_pattern and secret_name_pattern != ".*":
         print(" / name contains: " + secret_name_pattern, end = "")
-    if secret_key_name_pattern:
+    if secret_key_name_pattern and secret_key_name_pattern != ".*":
         print(" / secret keys contains: " + secret_key_name_pattern, end = "")
     print("")
 
