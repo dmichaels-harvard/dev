@@ -19,11 +19,11 @@ def print_aws_stack_template(stack_name):
     if isinstance(stack_template_body, OrderedDict):
         #
         # For some reason for our AWS stack c4-foursight-cgap-supertest-stack
-        # in particular, we get back an OrderedDict, which we print as JSON.
+        # in particular, we get back an OrderedDict, which we print as JSON;
+        # having trouble converting to YAML.
         #
         stack_template_json = json.dumps(stack_template_body, default=str, indent=2)
         print(stack_template_json)
-        pass
     else:
         #
         # For other AWS stacks like c4-datastore-cgap-supertest-stack,
