@@ -30,19 +30,19 @@ def print_aws_secrets(secret_name_pattern: str = None, secret_key_name_pattern: 
     Prints (to stdout) AWS secrets for the currently active AWS credentials.
 
     By default prints just (all) the *names* of the secrets available, e.g.
-    C4DatastoreCgapSupertestApplicationConfiguration. Use :param:`secret_name_pattern`
+    C4DatastoreCgapSupertestRDSSecret. Use :param:`secret_name_pattern`
     to limit these secret names. Use :param:`secret_key_name_pattern` set to '*'
     to print all secret keys/values (for each secret name), or to some pattern to
-    limit to those matching that pattern. Secret values with key name which *look*
+    limit to keys matching that pattern. Secret values with key name which *look*
     secret will obfuscated by default; use :param:`show` to print them in plaintext.
     See SECRET_KEY_NAMES_FOR_OBFUSCATION below for what looks like a secret key name. 
 
     :param secret_name_pattern: If None then prints all secrets name,
       otherwise only those that contain the given pattern.
     :param secret_key_name_pattern: If None then does not print any secret keys/values;
-      otherwise prints only those that contain the given pattern; use '*' for all.
-    :param show: If False then obfuscates secret values with key name that look secret,
-      e.g. containing 'password' or 'secret', otherwise prints all values in plaintext.
+      otherwise prints only for keys that contain the given pattern; use '*' for all.
+    :param show: If False (default) then obfuscates secret values with key name that look
+      secret, e.g. containing 'password' or 'secret', otherwise prints values in plaintext.
     """
 
     # Adjust/amend this as necessary.
@@ -109,7 +109,7 @@ def main():
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("--name", type=str, required=False)
     #
-    # How can we make --secret take an *option* argument,
+    # How can we make --secret take an *optional* argument,
     # so we can not have both '--secrets' and '--secret pattern'?
     #
     args_parser.add_argument("--secret", type=str, required=False)
