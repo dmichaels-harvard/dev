@@ -1,3 +1,6 @@
+# Script to setup the 'custom' directory for 4dn-cloud-infra
+# IN PROGRESS (dmichaels)
+
 import argparse
 from   enum import Enum
 import re
@@ -35,7 +38,7 @@ class SecretsTemplateVars(Enum):
     RE_CAPTCHA_KEY     = "__TEMPLATE_VALUE_RE_CAPTCHA_KEY__"
     RE_CAPTCHA_SECRET  = "__TEMPLATE_VALUE_RE_CAPTCHA_SECRET__"
 
-def get_fallback_account_number(aws_dir):
+def get_fallback_account_number(aws_dir: str):
     """
     Obtains/returns the account_number value by executing the test_creds.sh
     file in the chosen (use_test_creds) AWS environment and grabbing the value
@@ -64,7 +67,7 @@ def get_fallback_identity(aws_env: str):
     """
     return "C4Datastore" + camelize(aws_env) + "ApplicationConfiguration"
 
-def expand_json_template_file(template_file: str, output_file: str, template_substitutions):
+def expand_json_template_file(template_file: str, output_file: str, template_substitutions: dict):
     if not os.path.isfile(template_file):
         return False
     try:
@@ -79,6 +82,12 @@ def expand_json_template_file(template_file: str, output_file: str, template_sub
         return False
 
 def generate_s3_encrypt_key():
+    """
+    Returns a value suitable for an S3 encrypt key.
+    TODO: Replicating the method used in scripts/create_s3_encrypt_key but should
+          we modifed that script and call out to it? ANd if we do do it here then
+          probably should also replicate the openssl version checking.
+    """
     s3_encrypt_key_command = "openssl enc -aes-128-cbc -k `ps -ax | md5` -P -pbkdf2 -a"
     s3_encrypt_key_command_output = subprocess.check_output(s3_encrypt_key_command, shell=True).decode("utf-8").strip()
     return re.compile("key=(.*)\n").search(s3_encrypt_key_command_output).group(1)
@@ -97,10 +106,9 @@ def exit_without_doing_anything(message: str = "", status: int = 1):
 
 def print_directory_tree(directory: str):
     """
-    Prints the given directory as a tree. Stolen/adapted from:
+    Prints the given directory as a tree. Taken/adapted from:
     https://stackoverflow.com/questions/9727673/list-directory-tree-structure-in-python
     """
-  # from datetime import datetime
     def tree_generator(directory, prefix: str = ''):
         space = '    ' ; branch = '│   ' ; tee = '├── ' ; last = '└── '
         contents = [os.path.join(directory, item) for item in os.listdir(directory)]
@@ -108,7 +116,6 @@ def print_directory_tree(directory: str):
         for pointer, path in zip(pointers, contents):
             if os.path.islink(path): symlink = "@ -> " + os.readlink(path)
             else: symlink = ""
-          # modified_time = " (" + datetime.fromtimestamp(os.path.getmtime(path)).strftime("%Y:%m:%d %H:%M:%S") + ")"
             yield prefix + pointer + os.path.basename(path) + symlink # + modified_time
             if os.path.isdir(path):
                 extension = branch if pointer == tee else space 
@@ -129,9 +136,7 @@ def main():
     args_parser.add_argument("--auth0secret", type=str, required=False)
     args_parser.add_argument("--recaptchakey", type=str, required=False)
     args_parser.add_argument("--recaptchasecret", type=str, required=False)
-    args_parser.add_argument("--verbose", action="store_true", required=False)
     args_parser.add_argument("--debug", action="store_true", required=False)
-    args_parser.add_argument("--silent", action="store_true", required=False)
     args_parser.add_argument("--yes", action="store_true", required=False)
     args = args_parser.parse_args()
 
@@ -245,6 +250,7 @@ def main():
         exit_without_doing_anything()
 
     # Confirmed. First create the custom directory itself. 
+    # TODO: Catch exceptions et cetera
 
     print(f"Creating directory: {os.path.abspath(custom_dir)}")
     os.makedirs(custom_dir)
