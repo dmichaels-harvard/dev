@@ -1,12 +1,12 @@
 import argparse
+from   enum import Enum
 import io
 import json
 import glob
 import os
 import subprocess
-from enum import Enum
 
-from dcicutils.misc_utils import json_leaf_subst as expand_json
+from dcicutils.misc_utils import json_leaf_subst as expand_json_template
 from dcicutils.cloudformation_utils import camelize
 from .aws_env_info import AwsEnvInfo
 
@@ -20,12 +20,14 @@ CONFIG_TEMPLATE_FILE   = "templates/config.json.template"
 SECRETS_TEMPLATE_FILE  = "templates/secrets.json.template"
 THIS_SCRIPT_DIR        = os.path.dirname(__file__)
 
-class TemplateVars(Enum):
+class ConfigTemplateVars(Enum):
     ACCOUNT_NUMBER     = "__TEMPLATE_ACCOUNT_NUMBER__"
     DEPLOYING_IAM_USER = "__TEMPLATE_DEPLOYING_IAM_USER__"
     IDENTITY           = "__TEMPLATE_IDENTITY__"
     ENCODED_ENV_NAME   = "__TEMPLATE_ENCODED_ENV_NAME__"
     S3_BUCKET_ORG      = "__TEMPLATE_VALUE_S3_BUCKET_ORG__"
+
+class SecretsTemplateVars(Enum):
     AUTH0_CLIENT       = "__TEMPLATE_VALUE_AUTH0_CLIENT__"
     AUTH0_SECRET       = "__TEMPLATE_VALUE_AUTH0_SECRET__"
     RE_CAPTCHA_KEY     = "__TEMPLATE_VALUE_RE_CAPTCHA_KEY__"
@@ -53,7 +55,7 @@ def get_fallback_deploying_iam_user():
     """
     return os.environ.get("USER")
 
-def get_fallback_identity(aws_env):
+def get_fallback_identity(aws_env: str):
     """
     Obtains/returns the identity by simple concantentation of strings
     the same way the 4dn-cloud-infra code does it.
@@ -61,8 +63,22 @@ def get_fallback_identity(aws_env):
     """
     return "C4Datastore" + camelize(aws_env) + "ApplicationConfiguration"
 
+def expand_json_template_file(template_file: str, output_file: str, template_substitutions):
+    if not os.path.isfile(template_file):
+        return False
+    try:
+        with io.open(template_file, "r") as template_f:
+            template_file_json = json.load(template_f)
+        expanded_template_json = expand_json_template(template_file_json, template_substitutions)
+        with io.open(output_file, "w") as output_f:
+            json.dump(expanded_template_json, output_f, indent=2)
+            output_f.write("\n")
+        return True
+    except Exception as e:
+        return False
+
 def confirm_with_user(message: str):
-    input_answer = input(message + " ").strip().lower()
+    input_answer = input(message + " (yes|no) ").strip().lower()
     if input_answer == "yes":
         return True
     return False
@@ -72,6 +88,29 @@ def exit_without_doing_anything(message: str = "", status: int = 1):
         print(message)
     print("Exiting without doing anything.")
     exit(status)
+
+def print_directory_tree(directory: str):
+    """
+    Prints the given directory as a tree. Stolen/adapted from:
+    https://stackoverflow.com/questions/9727673/list-directory-tree-structure-in-python
+    """
+  # from datetime import datetime
+    def tree_generator(directory, prefix: str = ''):
+        space = '    ' ; branch = '│   ' ; tee = '├── ' ; last = '└── '
+        contents = [ os.path.join(directory, item) for item in os.listdir(directory) ]
+        pointers = [tee] * (len(contents) - 1) + [last]
+        for pointer, path in zip(pointers, contents):
+            if os.path.islink(path):
+                symlink = "@ -> " + os.readlink(path)
+            else:
+                symlink = ""
+          # modified_time = " (" + datetime.fromtimestamp(os.path.getmtime(path)).strftime("%Y:%m:%d %H:%M:%S") + ")"
+            yield prefix + pointer + os.path.basename(path) + symlink # + modified_time
+            if os.path.isdir(path):
+                extension = branch if pointer == tee else space 
+                yield from tree_generator(path, prefix=prefix+extension)
+    print(directory)
+    for line in tree_generator(directory): print(line)
 
 def main():
 
@@ -93,7 +132,7 @@ def main():
     args = args_parser.parse_args()
 
     aws_env = args.env
-    custom_dir = args.out
+    custom_dir = os.path.abspath(args.out)
     account_number = args.account
     deploying_iam_user = args.username
     identity = args.identity
@@ -103,9 +142,9 @@ def main():
     re_captcha_key = args.recaptchakey
     re_captcha_secret = args.recaptchasecret
 
-    current_dir = os.getcwd()
-    print(f"Current directory: {current_dir}")
-    print(f"Current username: {os.environ['USER']}")
+    if args.debug:
+        print(f"Current directory: {os.getcwd()}")
+        print(f"Current username: {os.environ['USER']}")
 
     aws_env_info = AwsEnvInfo(AWS_DIR)
     aws_current_env = aws_env_info.get_current_env()
@@ -113,8 +152,9 @@ def main():
     # Make sure the AWS environment name given is good.
     # Required but just in case not set anyways, check current
     # environment, if set, and ask them if they want to use that.
+    # But don't do this if --yes option given.
     #
-    if not aws_env:
+    if not aws_env and args.yes:
         if not aws_current_env:
             exit_without_doing_anything("No environment specified. Use the --env option to specify this.")
         else:
@@ -148,9 +188,9 @@ def main():
     if not custom_dir:
         exit_without_doing_anything("You must specify a custom output directory using the --out option.")
     if os.path.exists(custom_dir):
-        exit_without_doing_anything(f"A custom {'directory' if os.path.isdir(custom_dir) else 'file'} ({custom_dir}) already exists.")
+        exit_without_doing_anything(f"A custom {'directory' if os.path.isdir(custom_dir) else 'file'} already exists: {custom_dir}")
 
-    print(f"Using custom directory: {custom_dir} ({os.path.abspath(custom_dir)})")
+    print(f"Using custom directory: {custom_dir}")
 
     # Check all the inputs.
 
@@ -192,9 +232,14 @@ def main():
         auth0_secret = response
     print(f"Using Auth0 secret: {auth0_secret}")
 
+    if re_captcha_key:
+        print(f"Using reCaptchaKey: {re_captcha_key}")
+    if re_captcha_secret:
+        print(f"Using reCaptchaSecret: {re_captcha_secret}")
+
     # Confirm with the user the everything looks okay.
 
-    if not confirm_with_user("Does the above look okay?"):
+    if not args.yes and not confirm_with_user("Confirm the above. Continue with setup?"):
         exit_without_doing_anything()
 
     # Confirmed. First create the custom directory itself. 
@@ -204,66 +249,60 @@ def main():
 
     # Create the config.json file from the template and the inputs.
     # First we expand the template variables in the config.json file.
+    # TODO: template file relative to this script directory?
 
-    config_template_file_path = os.path.join(THIS_SCRIPT_DIR, CONFIG_TEMPLATE_FILE)
+    config_template_file = os.path.join(THIS_SCRIPT_DIR, CONFIG_TEMPLATE_FILE)
+    config_file = os.path.abspath(os.path.join(custom_dir, CONFIG_FILE))
+
     if args.debug:
-        print(f"Config template file: {config_template_file_path}")
-    if not os.path.isfile(config_template_file_path):
-        exit_without_doing_anything(f"ERROR: SHOULD NOT HAPPEN: Cannot find config.json template file: {config_template_file_path}")
+        print(f"Config template file: {config_template_file}")
 
-    with io.open(config_template_file_path , "r") as config_template_file:
-        config_template_file_json = json.load(config_template_file)
+    print(f"Creating config file: {os.path.abspath(config_file)}")
 
-    expanded_config_file_json = expand_json(config_template_file_json,
+    if not expand_json_template_file(config_template_file, config_file,
     {
-        TemplateVars.ACCOUNT_NUMBER.value:     account_number,
-        TemplateVars.DEPLOYING_IAM_USER.value: deploying_iam_user,
-        TemplateVars.IDENTITY.value:           identity,
-        TemplateVars.S3_BUCKET_ORG.value:      s3_bucket_org,
-        TemplateVars.ENCODED_ENV_NAME.value:   aws_env
-    })
-
-    # Write the template-expanded config.json file.
-
-    config_file_path = os.path.join(custom_dir, CONFIG_FILE)
-    print(f"Creating config file: {os.path.abspath(config_file_path)}")
-    with io.open(config_file_path, "w") as config_file:
-        json.dump(expanded_config_file_json, config_file, indent=2)
-        config_file.write("\n")
+        ConfigTemplateVars.ACCOUNT_NUMBER.value:     account_number,
+        ConfigTemplateVars.DEPLOYING_IAM_USER.value: deploying_iam_user,
+        ConfigTemplateVars.IDENTITY.value:           identity,
+        ConfigTemplateVars.S3_BUCKET_ORG.value:      s3_bucket_org,
+        ConfigTemplateVars.ENCODED_ENV_NAME.value:   aws_env
+    }):
+        print(f"Error writing: {config_file} (from: {config_template_file})")
 
     # Create the secrets.json file from the template and the inputs.
     # First we expand the template variables in the secrets.json file.
+    # TODO: template file relative to this script directory?
 
-    secrets_template_file_path = os.path.join(THIS_SCRIPT_DIR, SECRETS_TEMPLATE_FILE)
+    secrets_template_file = os.path.join(THIS_SCRIPT_DIR, SECRETS_TEMPLATE_FILE)
+    secrets_file = os.path.abspath(os.path.join(custom_dir, SECRETS_FILE))
+
     if args.debug:
-        print(f"Secrets template file: {secrets_template_file_path}")
-    if not os.path.isfile(secrets_template_file_path):
-        exit_without_doing_anything(f"ERROR: SHOULD NOT HAPPEN: Cannot find secrets.json template file: {secrets_template_file_path}")
+        print(f"Secrets template file: {secrets_template_file}")
 
-    with io.open(secrets_template_file_path , "r") as secrets_template_file:
-        secrets_template_file_json = json.load(secrets_template_file)
+    print(f"Creating secrets file: {secrets_file}")
 
-    expanded_secrets_file_json = expand_json(secrets_template_file_json,
+    if not expand_json_template_file(secrets_template_file, secrets_file,
     {
-        TemplateVars.AUTH0_CLIENT.value:      auth0_client,
-        TemplateVars.AUTH0_SECRET.value:      auth0_secret,
-        TemplateVars.RE_CAPTCHA_KEY.value:    re_captcha_key,
-        TemplateVars.RE_CAPTCHA_SECRET.value: re_captcha_secret
-    })
-
-    # Write the template-expanded secrets.json file.
-
-    secrets_file_path = os.path.join(custom_dir, SECRETS_FILE)
-    print(f"Creating secrets file: {os.path.abspath(secrets_file_path)}")
-    with io.open(secrets_file_path, "w") as secrets_file:
-        json.dump(expanded_secrets_file_json, secrets_file, indent=2)
-        secrets_file.write("\n")
+        SecretsTemplateVars.AUTH0_CLIENT.value:      auth0_client,
+        SecretsTemplateVars.AUTH0_SECRET.value:      auth0_secret,
+        SecretsTemplateVars.RE_CAPTCHA_KEY.value:    re_captcha_key,
+        SecretsTemplateVars.RE_CAPTCHA_SECRET.value: re_captcha_secret
+    }):
+        print(f"Error writing: {secrets_file} (from: {secrets_template_file})")
 
     # Create the symlink from custom/aws_creds to ~/.aws_test.ENV_NAME
 
     custom_aws_dir = os.path.abspath(os.path.join(custom_dir, CUSTOM_AWS_DIR))
     print(f"Creating symlink: {custom_aws_dir} -> {aws_dir} ")
     os.symlink(aws_dir, custom_aws_dir)
+
+    print("Here is your new custom config directory:")
+    print_directory_tree(custom_dir)
+
+    # Create the S3 encrypt key.
+
+    s3_encrypt_key_command = "openssl enc -aes-128-cbc -k ${seed} -P -pbkdf2 -az"
+    s3_encrypt_key = str(subprocess.check_output(s3_encrypt_key_command, shell=True).decode("utf-8")).strip()
 
 
 if __name__ == "__main__":
