@@ -1,5 +1,6 @@
 import argparse
 from   enum import Enum
+import re
 import io
 import json
 import glob
@@ -11,13 +12,14 @@ from dcicutils.cloudformation_utils import camelize
 from .aws_env_info import AwsEnvInfo
 
 AWS_DIR                = "~/.aws_test"
-CUSTOM_DIR             = "customxxx"
-CUSTOM_AWS_DIR         = "aws_creds"
 TEST_CREDS_SCRIPT_FILE = "test_creds.sh"
+CUSTOM_DIR             = "custom"
+CUSTOM_AWS_DIR         = "aws_creds"
 CONFIG_FILE            = "config.json"
 SECRETS_FILE           = "secrets.json"
 CONFIG_TEMPLATE_FILE   = "templates/config.json.template"
 SECRETS_TEMPLATE_FILE  = "templates/secrets.json.template"
+S3_ENCRYPT_KEY_FILE    = "s3_encrypt_key.txt-TEST"
 THIS_SCRIPT_DIR        = os.path.dirname(__file__)
 
 class ConfigTemplateVars(Enum):
@@ -40,10 +42,9 @@ def get_fallback_account_number(aws_dir):
     of the ACCOUNT_NUMBER environment value which is likely to be set there.
     :param aws_dir: The AWS envronment directory path.
     """
-    ACCOUNT_NUMBER_ENV_VAR = "ACCOUNT_NUMBER"
     try:
         test_creds_script_file = os.path.join(aws_dir, TEST_CREDS_SCRIPT_FILE)
-        command = f"source {test_creds_script_file } ; echo ${ACCOUNT_NUMBER_ENV_VAR}"
+        command = f"source {test_creds_script_file} ; echo $ACCOUNT_NUMBER"
         return str(subprocess.check_output(command, shell=True).decode("utf-8")).strip()
     except Exception as e:
         return None
@@ -77,6 +78,11 @@ def expand_json_template_file(template_file: str, output_file: str, template_sub
     except Exception as e:
         return False
 
+def generate_s3_encrypt_key():
+    s3_encrypt_key_command = "openssl enc -aes-128-cbc -k `ps -ax | md5` -P -pbkdf2 -a"
+    s3_encrypt_key_command_output = subprocess.check_output(s3_encrypt_key_command, shell=True).decode("utf-8").strip()
+    return re.compile("key=(.*)\n").search(s3_encrypt_key_command_output).group(1)
+
 def confirm_with_user(message: str):
     input_answer = input(message + " (yes|no) ").strip().lower()
     if input_answer == "yes":
@@ -97,13 +103,11 @@ def print_directory_tree(directory: str):
   # from datetime import datetime
     def tree_generator(directory, prefix: str = ''):
         space = '    ' ; branch = '│   ' ; tee = '├── ' ; last = '└── '
-        contents = [ os.path.join(directory, item) for item in os.listdir(directory) ]
+        contents = [os.path.join(directory, item) for item in os.listdir(directory)]
         pointers = [tee] * (len(contents) - 1) + [last]
         for pointer, path in zip(pointers, contents):
-            if os.path.islink(path):
-                symlink = "@ -> " + os.readlink(path)
-            else:
-                symlink = ""
+            if os.path.islink(path): symlink = "@ -> " + os.readlink(path)
+            else: symlink = ""
           # modified_time = " (" + datetime.fromtimestamp(os.path.getmtime(path)).strftime("%Y:%m:%d %H:%M:%S") + ")"
             yield prefix + pointer + os.path.basename(path) + symlink # + modified_time
             if os.path.isdir(path):
@@ -153,7 +157,7 @@ def main():
     # Required but just in case not set anyways, check current
     # environment, if set, and ask them if they want to use that.
     # But don't do this if --yes option given.
-    #
+
     if not aws_env and args.yes:
         if not aws_current_env:
             exit_without_doing_anything("No environment specified. Use the --env option to specify this.")
@@ -166,7 +170,7 @@ def main():
 
     # Make sure the environment specified
     # actually exists as a ~/.aws_test.ENV_NAME directory.
-    #
+
     aws_available_envs = aws_env_info.get_available_envs()
     if aws_env not in aws_available_envs:
         print(f"No environment for this name exists: {aws_env}")
@@ -184,7 +188,7 @@ def main():
     print(f"Your AWS credentials directory: {aws_dir}")
 
     # Create the custom directory; but make sue it doesn't already exist.
-    #
+
     if not custom_dir:
         exit_without_doing_anything("You must specify a custom output directory using the --out option.")
     if os.path.exists(custom_dir):
@@ -218,18 +222,16 @@ def main():
 
     if not auth0_client:
         print("You must specify a Auth0 client ID using the --auth0client option.")
-        response = input("Or enter your Auth0 client ID: ").strip()
-        if not response:
+        auth0_client = input("Or enter your Auth0 client ID: ").strip()
+        if not auth0_client:
             exit_without_doing_anything(f"You must specify an Auth0 client. Use the --auth0client option.")
-        auth0_client = response
     print(f"Using Auth0 client: {auth0_client}")
 
     if not auth0_secret:
         print("You must specify a Auth0 secret using the --auth0secret option.")
-        response = input("Or enter your Auth0 secret ID: ").strip()
-        if not response:
+        auth0_secret = input("Or enter your Auth0 secret ID: ").strip()
+        if not auth0_secret:
             exit_without_doing_anything(f"You must specify an Auth0 secret. Use the --auth0secret option.")
-        auth0_secret = response
     print(f"Using Auth0 secret: {auth0_secret}")
 
     if re_captcha_key:
@@ -266,8 +268,7 @@ def main():
         ConfigTemplateVars.IDENTITY.value:           identity,
         ConfigTemplateVars.S3_BUCKET_ORG.value:      s3_bucket_org,
         ConfigTemplateVars.ENCODED_ENV_NAME.value:   aws_env
-    }):
-        print(f"Error writing: {config_file} (from: {config_template_file})")
+    }): print(f"Error writing: {config_file} (from: {config_template_file})")
 
     # Create the secrets.json file from the template and the inputs.
     # First we expand the template variables in the secrets.json file.
@@ -290,19 +291,29 @@ def main():
     }):
         print(f"Error writing: {secrets_file} (from: {secrets_template_file})")
 
-    # Create the symlink from custom/aws_creds to ~/.aws_test.ENV_NAME
+    # Create the symlink from custom/aws_creds to: ~/.aws_test.ENV_NAME
 
     custom_aws_dir = os.path.abspath(os.path.join(custom_dir, CUSTOM_AWS_DIR))
     print(f"Creating symlink: {custom_aws_dir} -> {aws_dir} ")
     os.symlink(aws_dir, custom_aws_dir)
 
+    # Create the S3 encrypt key file.
+
+    s3_encrypt_key = generate_s3_encrypt_key()
+    s3_encrypt_key_file = os.path.abspath(os.path.join(custom_aws_dir, S3_ENCRYPT_KEY_FILE))
+    if os.path.exists(s3_encrypt_key_file):
+        print(f"S3 encrypt file already exists: {s3_encrypt_key_file}")
+        print("Not overwriting this!")
+    else:
+        print(f"Creating S3 encrypt file: {s3_encrypt_key_file}")
+        with io.open(s3_encrypt_key_file, "w") as s3_encrypt_key_f:
+            s3_encrypt_key_f.write(s3_encrypt_key)
+            s3_encrypt_key_f.write("\n")
+
+    # Done. Summarize.
+
     print("Here is your new custom config directory:")
     print_directory_tree(custom_dir)
-
-    # Create the S3 encrypt key.
-
-    s3_encrypt_key_command = "openssl enc -aes-128-cbc -k ${seed} -P -pbkdf2 -az"
-    s3_encrypt_key = str(subprocess.check_output(s3_encrypt_key_command, shell=True).decode("utf-8")).strip()
 
 
 if __name__ == "__main__":
