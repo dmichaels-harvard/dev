@@ -1,6 +1,16 @@
 import os
 import glob
 
+# Testing notes ...
+# External resources accesed by this module:
+# - File System via:
+#   - glob.glob
+#   - os.path.basename
+#   - os.path.expanduser
+#   - os.path.isdir
+#   - os.path.islink
+#   - os.readlink
+
 class AwsEnvInfo:
     """
     Class to gather/dispense info about the ~/.aws_test directories

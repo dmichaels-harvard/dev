@@ -1,9 +1,41 @@
 # Script to setup the 'custom' directory for 4dn-cloud-infra
 # IN PROGRESS (dmichaels)
+#
+# need to call this ... but need a this.name which isa C4Name (4363939912)
+# c4_alpha_stack_name('datastore')  -> C4Name
+# - self.name.logical_id(camelize(ConfigManager.get_config_setting(Settings.ENV_NAME)) + self.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX)
+#  
+# - self.name.logical_id(camelize(ConfigManager.get_config_setting(Settings.ENV_NAME)) + self.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX) =
+#  'C4DatastoreCgapSupertestApplicationConfiguration'
+#
+# - ConfigManager.get_config_setting(Settings.ENV_NAME) =
+#  'cgap-supertest'
+#
+# - camelize(ConfigManager.get_config_setting(Settings.ENV_NAME)) =
+#  'CgapSupertest'
+#
+# - self.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX =
+#  'ApplicationConfiguration'
+#
+# - camelize(ConfigManager.get_config_setting(Settings.ENV_NAME)) + self.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX =
+#  'CgapSupertestApplicationConfiguration'
+#
+# - self.name.logical_id("FooBar") =
+#  'C4DatastoreCgapSupertestFooBar'
+
+# Testing notes ...
+# External resources accesed by this module:
+# - File System via:
+#   - os.environ.get
+#   - os.path.basename
+#   - os.path.dirname
+#   - os.path.isdir
+#   - os.path.islink
+#   - os.path.join
+#   - os.readlink
 
 import argparse
 from   enum import Enum
-import glob
 import io
 import json
 import os
@@ -64,33 +96,61 @@ def get_fallback_identity(env_name: str):
     """
     Obtains/returns the identity by simple concantentation of strings
     the same way the 4dn-cloud-infra code does it.
+
     TODO: Get this directly via 4dn-cloud-infra code.
+
+    TODO: This does NOT seem to be straightforward as, the creation of this,
+          in datastore.py:application_configuration_secret via self.name.logical_id,
+          requires a C4Name which if created via alpha_stacks.py:c4_alpha_stack_name('datastore')
+          ends up printing a bunch of "Registering" stuff (from base.py).
+
+          And anyways we really NEED a C4Datastore object (to get the whole call to
+          application_configuration_secret which includes knowledge of how to concat
+          things together for C4Name.logical_id) and this object gets created (I think) via
+          decorators; all very interwined and dependent on other stuff.
+
+          And also confused about this because the 'identity' in config.json seems to be required;
+          we get and exception on ConfigManager.get_config_setting(Settings.IDENTITY) in
+          datastore.py:application_configuration_secret if it is not set. I had set it
+          manually from the beginning (had originally gotten this verbatim as
+          C4DatastoreCgapSupertestApplicationConfiguration from Will via Slack on 2022-05-16 @ 2:16pm)
+
+          This is the best I can do so far ...
+          Which, for the example final name of 'C4DatastoreCgapSupertestApplicationConfiguration',
+          by using C4Name.logical_id() and C4Datastore.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX,
+          saves use from knowing the prefix 'C4Datastore' and the suffix 'ApplicationConfiguration'
+          but doesn't save us from knowing to put the camelized env_name (CgapSupertest) in the middle.
+
+          And even here, if we don't ant random logging printed out, we'd need to comment-out,
+          or otherwise somehow obviate, the prints on line 52 in base.py, lines 160 in 224
+          in stack.py, and line 89 in part.py.
     """
-    return "C4Datastore" + camelize(env_name) + "ApplicationConfiguration"
+    from ..stacks.alpha_stacks import c4_alpha_stack_name
+    from ..parts.datastore import C4Datastore
+    c4name_datastore = c4_alpha_stack_name('datastore')
+    camelized_env_name = camelize(env_name)
+    identity_suffix = C4Datastore.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX
+    identity_value = c4name_datastore.logical_id(camelized_env_name + identity_suffix)
+    return identity_value
+  # return "C4Datastore" + camelize(env_name) + "ApplicationConfiguration"
 
 def expand_json_template_file(template_file: str, output_file: str, template_substitutions: dict):
-    if not os.path.isfile(template_file):
-        return False
-    try:
-        with io.open(template_file, "r") as template_f:
-            template_file_json = json.load(template_f)
-        expanded_template_json = expand_json_template(template_file_json, template_substitutions)
-        with io.open(output_file, "w") as output_f:
-            json.dump(expanded_template_json, output_f, indent=2)
-            output_f.write("\n")
-        return True
-    except Exception as e:
-        return False
+    with io.open(template_file, "r") as template_f:
+        template_file_json = json.load(template_f)
+    expanded_template_json = expand_json_template(template_file_json, template_substitutions)
+    with io.open(output_file, "w") as output_f:
+        json.dump(expanded_template_json, output_f, indent=2)
+        output_f.write("\n")
 
 def generate_s3_encrypt_key():
     """
     Returns a value suitable for an S3 encrypt key.
-    TODO: Replicating the method used in scripts/create_s3_encrypt_key but should
-          we modifed that script and call out to it? ANd if we do do it here then
-          probably should also replicate the openssl version checking.
+    TODO: Replicating exactly the method used in scripts/create_s3_encrypt_key but
+          should we rather modify that script and call out to it? And if we do do
+          it here then may need to also replicate the openssl version checking.
     """
     s3_encrypt_key_command = "openssl enc -aes-128-cbc -k `ps -ax | md5` -P -pbkdf2 -a"
-    s3_encrypt_key_command_output = subprocess.check_output(s3_encrypt_key_command, shell=True).decode("utf-8")
+    s3_encrypt_key_command_output = subprocess.check_output(s3_encrypt_key_command, shell=True).decode("utf-8").strip()
     return re.compile("key=(.*)\n").search(s3_encrypt_key_command_output).group(1)
 
 def confirm_with_user(message: str):
@@ -115,8 +175,8 @@ def print_directory_tree(directory: str):
         contents = [os.path.join(directory, item) for item in os.listdir(directory)]
         pointers = [tee] * (len(contents) - 1) + [last]
         for pointer, path in zip(pointers, contents):
-            symlink = "@ -> " + os.readlink(path) if os.path.islink(path) else ""
-            yield prefix + pointer + os.path.basename(path) + symlink # + modified_time
+            symlink = "@ ─> " + os.readlink(path) if os.path.islink(path) else ""
+            yield prefix + pointer + os.path.basename(path) + symlink
             if os.path.isdir(path):
                 extension = branch if pointer == tee else space 
                 yield from tree_generator(path, prefix=prefix+extension)
@@ -142,7 +202,7 @@ def main():
 
     if args.debug:
         print(f"Current directory: {os.getcwd()}")
-        print(f"Current username: {os.environ['USER']}")
+        print(f"Current username: {os.environ.get['USER']}")
 
     # Get basic environment info.
 
@@ -258,16 +318,19 @@ def main():
     if args.debug:
         print(f"Config template file: {config_template_file}")
 
+    if not os.path.isfile(config_template_file):
+        exit_without_doing_anything(f"ERROR: Cannot find config template file! {config_template_file}")
+
     print(f"Creating config file: {os.path.abspath(config_file)}")
 
-    if not expand_json_template_file(config_template_file, config_file,
+    expand_json_template_file(config_template_file, config_file,
     {
         ConfigTemplateVars.ACCOUNT_NUMBER.value:     args.account_number,
         ConfigTemplateVars.DEPLOYING_IAM_USER.value: args.deploying_iam_user,
         ConfigTemplateVars.IDENTITY.value:           args.identity,
         ConfigTemplateVars.S3_BUCKET_ORG.value:      args.s3_bucket_org,
         ConfigTemplateVars.ENCODED_ENV_NAME.value:   args.env_name
-    }): print(f"Error writing: {config_file} (from: {config_template_file})")
+    })
 
     # Create the secrets.json file from the template and the inputs.
     # First we expand the template variables in the secrets.json file.
@@ -279,16 +342,18 @@ def main():
     if args.debug:
         print(f"Secrets template file: {secrets_template_file}")
 
+    if not os.path.isfile(secrets_template_file):
+        exit_without_doing_anything(f"ERROR: Cannot find secrets template file! {secrets_template_file}")
+
     print(f"Creating secrets file: {secrets_file}")
 
-    if not expand_json_template_file(secrets_template_file, secrets_file,
+    expand_json_template_file(secrets_template_file, secrets_file,
     {
         SecretsTemplateVars.AUTH0_CLIENT.value:      args.auth0_client,
         SecretsTemplateVars.AUTH0_SECRET.value:      args.auth0_secret,
         SecretsTemplateVars.RE_CAPTCHA_KEY.value:    args.re_captcha_key,
         SecretsTemplateVars.RE_CAPTCHA_SECRET.value: args.re_captcha_secret
-    }):
-        print(f"Error writing: {secrets_file} (from: {secrets_template_file})")
+    })
 
     # Create the symlink from custom/aws_creds to ~/.aws_test.ENV_NAME.
 
