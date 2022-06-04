@@ -264,9 +264,10 @@ def main():
     # Make sure the AWS environment name given is good.
     # Required but just in case not set anyways, check current
     # environment, if set, and ask them if they want to use that.
-    # But don't do this if --yes option given.
+    # But don't do this interactive thing if --yes option given,
+    # rather just error out on the text if statement after this below.
 
-    if not args.env_name and args.yes:
+    if not args.env_name and not args.yes:
         if not current_env:
             exit_with_no_action("No environment specified. Use the --env option to specify this.")
         else:
@@ -279,13 +280,13 @@ def main():
     # Make sure the environment specified
     # actually exists as a ~/.aws_test.ENV_NAME directory.
 
-    if args.env_name not in available_envs:
+    if not args.env_name or args.env_name not in available_envs:
         print(f"No environment for this name exists: {args.env_name}")
         if available_envs:
             print("Available environments:")
             for aws_available_env in sorted(available_envs):
                 print(f"- {aws_available_env} ({env_info.get_dir(aws_available_env)})")
-            exit_with_no_action("Choose on of the above environment using the --env option.")
+            exit_with_no_action("Choose one of the above environment using the --env option.")
         else:
             exit_with_no_action \
                (f"No environments found at all.\nYou need to have at least one {env_info.get_base_dir()}.{{ENV_NAME}} directory setup.") 
