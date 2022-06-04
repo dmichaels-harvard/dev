@@ -38,7 +38,6 @@
 #     - os.symlink
 
 import argparse
-from   enum import Enum
 import io
 import json
 import os
@@ -61,14 +60,14 @@ SECRETS_TEMPLATE_FILE  = "templates/secrets.json.template"
 S3_ENCRYPT_KEY_FILE    = "s3_encrypt_key.txt"
 THIS_SCRIPT_DIR        = os.path.dirname(__file__)
 
-class ConfigTemplateVars(Enum):
+class ConfigTemplateVars:
     ACCOUNT_NUMBER     = "__TEMPLATE_ACCOUNT_NUMBER__"
     DEPLOYING_IAM_USER = "__TEMPLATE_DEPLOYING_IAM_USER__"
     IDENTITY           = "__TEMPLATE_IDENTITY__"
     ENCODED_ENV_NAME   = "__TEMPLATE_ENCODED_ENV_NAME__"
     S3_BUCKET_ORG      = "__TEMPLATE_VALUE_S3_BUCKET_ORG__"
 
-class SecretsTemplateVars(Enum):
+class SecretsTemplateVars:
     AUTH0_CLIENT       = "__TEMPLATE_VALUE_AUTH0_CLIENT__"
     AUTH0_SECRET       = "__TEMPLATE_VALUE_AUTH0_SECRET__"
     RE_CAPTCHA_KEY     = "__TEMPLATE_VALUE_RE_CAPTCHA_KEY__"
@@ -125,13 +124,13 @@ def get_fallback_identity(env_name: str):
           saves use from knowing the prefix 'C4Datastore' and the suffix 'ApplicationConfiguration'
           but doesn't save us from knowing to put the camelized env_name (CgapSupertest) in the middle.
 
-          And even here, if we don't ant random logging printed out, we'd need to comment-out,
+          And even here, if we don't want random logging printed out, we'd need to comment-out,
           or otherwise somehow obviate, the prints here ...
 
-          - src/base.py:            line 52
-          - src/stack.py:           lines 160 and 224
-          - src/part.py:            line 89
-          - src/parts/datastore.py: line 340
+          - src/base.py:            line  52
+          - src/stack.py:           lines 160, 224
+          - src/part.py:            line  89
+          - src/parts/datastore.py: line  340
     """
 
     # First attempt:
@@ -145,9 +144,9 @@ def get_fallback_identity(env_name: str):
     # saves use from knowing the prefix 'C4Datastore' and the suffix 'ApplicationConfiguration'
     # but doesn't save us from knowing to put the camelized env_name (CgapSupertest) in the middle.
     # Will print random logging unless commenting out or otherwise obviating these print statements:
-    # - src/base.py:  line 52
-    # - src/stack.py: lines 160 and 224
-    # - src/part.py:  line 89
+    # - src/base.py:  line  52
+    # - src/stack.py: lines 160, 224
+    # - src/part.py:  line  89
     #
 #   c4name_datastore = c4_alpha_stack_name('datastore')
 #   camelized_env_name = camelize(env_name)
@@ -157,10 +156,10 @@ def get_fallback_identity(env_name: str):
     # Third attempt:
     # This gets the desired value though a little wonky.
     # Will print random logging unless commenting out or otherwise obviating these print statements:
-    # - src/base.py:            line 52
-    # - src/stack.py:           lines 160 and 224
-    # - src/part.py:            line 89
-    # - src/parts/datastore.py: line 340
+    # - src/base.py:            line  52
+    # - src/stack.py:           lines 160, 224
+    # - src/part.py:            line  89
+    # - src/parts/datastore.py: line  340
     #
     try:
         from ..stacks.alpha_stacks import create_c4_alpha_stack
@@ -377,11 +376,11 @@ def main():
     print(f"Creating config file: {os.path.abspath(config_file)}")
     expand_json_template_file(config_template_file, config_file,
     {
-        ConfigTemplateVars.ACCOUNT_NUMBER.value:     args.account_number,
-        ConfigTemplateVars.DEPLOYING_IAM_USER.value: args.deploying_iam_user,
-        ConfigTemplateVars.IDENTITY.value:           args.identity,
-        ConfigTemplateVars.S3_BUCKET_ORG.value:      args.s3_bucket_org,
-        ConfigTemplateVars.ENCODED_ENV_NAME.value:   args.env_name
+        ConfigTemplateVars.ACCOUNT_NUMBER:     args.account_number,
+        ConfigTemplateVars.DEPLOYING_IAM_USER: args.deploying_iam_user,
+        ConfigTemplateVars.IDENTITY:           args.identity,
+        ConfigTemplateVars.S3_BUCKET_ORG:      args.s3_bucket_org,
+        ConfigTemplateVars.ENCODED_ENV_NAME:   args.env_name
     })
 
     # Create the secrets.json file from the template and the inputs.
@@ -400,10 +399,10 @@ def main():
     print(f"Creating secrets file: {secrets_file}")
     expand_json_template_file(secrets_template_file, secrets_file,
     {
-        SecretsTemplateVars.AUTH0_CLIENT.value:      args.auth0_client,
-        SecretsTemplateVars.AUTH0_SECRET.value:      args.auth0_secret,
-        SecretsTemplateVars.RE_CAPTCHA_KEY.value:    args.re_captcha_key,
-        SecretsTemplateVars.RE_CAPTCHA_SECRET.value: args.re_captcha_secret
+        SecretsTemplateVars.AUTH0_CLIENT:      args.auth0_client,
+        SecretsTemplateVars.AUTH0_SECRET:      args.auth0_secret,
+        SecretsTemplateVars.RE_CAPTCHA_KEY:    args.re_captcha_key,
+        SecretsTemplateVars.RE_CAPTCHA_SECRET: args.re_captcha_secret
     })
 
     # Create the symlink from custom/aws_creds to ~/.aws_test.ENV_NAME.
