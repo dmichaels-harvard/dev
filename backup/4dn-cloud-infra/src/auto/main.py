@@ -1,38 +1,41 @@
-# Script to setup the 'custom' directory for 4dn-cloud-infra
-# IN PROGRESS (dmichaels)
+# IN PROGRESS / dmichaels / 2022-06-04
 #
-# need to call this ... but need a this.name which isa C4Name (4363939912)
-# c4_alpha_stack_name('datastore')  -> C4Name
-# - self.name.logical_id(camelize(ConfigManager.get_config_setting(Settings.ENV_NAME)) + self.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX)
-#  
-# - self.name.logical_id(camelize(ConfigManager.get_config_setting(Settings.ENV_NAME)) + self.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX) =
-#  'C4DatastoreCgapSupertestApplicationConfiguration'
+# Script to setup the custom directory for 4dn-cloud-infra within that repo.
+# For example like this:
 #
-# - ConfigManager.get_config_setting(Settings.ENV_NAME) =
-#  'cgap-supertest'
+#  ─ custom/
+#    ├── config.json
+#    ├── secrets.json
+#    └── aws_creds@ ─> ~/.aws_test.cgap-supertest/
+#        ├── credentials
+#        ├── test_creds.sh
+#        └── s3_encrypt_key.txt
 #
-# - camelize(ConfigManager.get_config_setting(Settings.ENV_NAME)) =
-#  'CgapSupertest'
+# The credentials and test_creds.sh files ared assumed to already exist;
+# the former is not used here; the latter actually is used here but only
+# to get a default/fallback value for the account_number if not specified.
 #
-# - self.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX =
-#  'ApplicationConfiguration'
+# The config.json and secrets.json files are created from existing template
+# files and inputs from the user to this script.
 #
-# - camelize(ConfigManager.get_config_setting(Settings.ENV_NAME)) + self.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX =
-#  'CgapSupertestApplicationConfiguration'
-#
-# - self.name.logical_id("FooBar") =
-#  'C4DatastoreCgapSupertestFooBar'
-
-# Testing notes ...
-# External resources accesed by this module:
-# - File System via:
-#   - os.environ.get
-#   - os.path.basename
-#   - os.path.dirname
-#   - os.path.isdir
-#   - os.path.islink
-#   - os.path.join
-#   - os.readlink
+# Testing notes:
+# - External resources accesed by this module:
+#   - filesystem via:
+#     - os.chmod
+#     - os.environ.get
+#     - os.getcwd
+#     - os.listdir
+#     - os.makedirs
+#     - os.path.abspath
+#     - os.path.basename
+#     - os.path.dirname
+#     - os.path.exists
+#     - os.path.isdir
+#     - os.path.isfile
+#     - os.path.islink
+#     - os.path.join
+#     - os.readlink
+#     - os.symlink
 
 import argparse
 from   enum import Enum
@@ -55,7 +58,7 @@ CONFIG_FILE            = "config.json"
 SECRETS_FILE           = "secrets.json"
 CONFIG_TEMPLATE_FILE   = "templates/config.json.template"
 SECRETS_TEMPLATE_FILE  = "templates/secrets.json.template"
-S3_ENCRYPT_KEY_FILE    = "s3_encrypt_key.txt-TEST"
+S3_ENCRYPT_KEY_FILE    = "s3_encrypt_key.txt"
 THIS_SCRIPT_DIR        = os.path.dirname(__file__)
 
 class ConfigTemplateVars(Enum):
@@ -81,7 +84,8 @@ def get_fallback_account_number(aws_dir: str):
     try:
         test_creds_script_file = os.path.join(aws_dir, TEST_CREDS_SCRIPT_FILE)
         command = f"source {test_creds_script_file} ; echo $ACCOUNT_NUMBER"
-        return str(subprocess.check_output(command, shell=True).decode("utf-8")).strip()
+        command_output = str(subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT).decode("utf-8")).strip()
+        return command_output
     except Exception as e:
         return None
 
@@ -122,17 +126,50 @@ def get_fallback_identity(env_name: str):
           but doesn't save us from knowing to put the camelized env_name (CgapSupertest) in the middle.
 
           And even here, if we don't ant random logging printed out, we'd need to comment-out,
-          or otherwise somehow obviate, the prints on line 52 in base.py, lines 160 in 224
-          in stack.py, and line 89 in part.py.
+          or otherwise somehow obviate, the prints here ...
+
+          - src/base.py:            line 52
+          - src/stack.py:           lines 160 and 224
+          - src/part.py:            line 89
+          - src/parts/datastore.py: line 340
     """
-    from ..stacks.alpha_stacks import c4_alpha_stack_name
-    from ..parts.datastore import C4Datastore
-    c4name_datastore = c4_alpha_stack_name('datastore')
-    camelized_env_name = camelize(env_name)
-    identity_suffix = C4Datastore.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX
-    identity_value = c4name_datastore.logical_id(camelized_env_name + identity_suffix)
+
+    # First attempt:
+    # Totally hardcoded.
+    #
+#   identity_value =  "C4Datastore" + camelize(env_name) + "ApplicationConfiguration"
+
+    # Second attempt:
+    # This, for the example final name of 'C4DatastoreCgapSupertestApplicationConfiguration',
+    # by using C4Name.logical_id() and C4Datastore.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX,
+    # saves use from knowing the prefix 'C4Datastore' and the suffix 'ApplicationConfiguration'
+    # but doesn't save us from knowing to put the camelized env_name (CgapSupertest) in the middle.
+    # Will print random logging unless commenting out or otherwise obviating these print statements:
+    # - src/base.py:  line 52
+    # - src/stack.py: lines 160 and 224
+    # - src/part.py:  line 89
+    #
+#   c4name_datastore = c4_alpha_stack_name('datastore')
+#   camelized_env_name = camelize(env_name)
+#   identity_suffix = C4Datastore.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX
+#   identity_value = c4name_datastore.logical_id(camelized_env_name + identity_suffix)
+
+    # Third attempt:
+    # This gets the desired value though a little wonky.
+    # Will print random logging unless commenting out or otherwise obviating these print statements:
+    # - src/base.py:            line 52
+    # - src/stack.py:           lines 160 and 224
+    # - src/part.py:            line 89
+    # - src/parts/datastore.py: line 340
+    #
+    try:
+        from ..stacks.alpha_stacks import create_c4_alpha_stack
+        c4_datastore_stack = create_c4_alpha_stack(name='datastore', account=None)
+        identity_value = c4_datastore_stack.parts[0].application_configuration_secret().Name
+    except Exception as e:
+        identity_value =  "C4Datastore" + camelize(env_name) + "ApplicationConfiguration"
+
     return identity_value
-  # return "C4Datastore" + camelize(env_name) + "ApplicationConfiguration"
 
 def expand_json_template_file(template_file: str, output_file: str, template_substitutions: dict):
     with io.open(template_file, "r") as template_f:
@@ -159,7 +196,7 @@ def confirm_with_user(message: str):
         return True
     return False
 
-def exit_without_doing_anything(message: str = "", status: int = 1):
+def exit_with_no_action(message: str = "", status: int = 1):
     if message:
         print(message)
     print("Exiting without doing anything.")
@@ -180,29 +217,43 @@ def print_directory_tree(directory: str):
             if os.path.isdir(path):
                 extension = branch if pointer == tee else space 
                 yield from tree_generator(path, prefix=prefix+extension)
-    print(directory)
-    for line in tree_generator(directory): print(line)
+    print('└─ ' + directory)
+    for line in tree_generator(directory, prefix='   '): print(line)
 
 def main():
 
+    # Setup/parse arguments.
+    # Strip whitespace to ensure we don't get passed odd/empty values.
+    # TODO: Must be better way to do this than creating class or manually doing it post hoc.
+
+    class strip(argparse.Action):
+        def __call__(self, parser, namespace, values, option_string=None):
+            setattr(namespace, self.dest, values.strip())
     argp = argparse.ArgumentParser()
-    argp.add_argument("--env",             dest='env_name', type=str, required=True)
-    argp.add_argument("--out",             dest='custom_dir_name', type=str, default=CUSTOM_DIR, required=False)
-    argp.add_argument("--account",         dest='account_number', type=str, required=False)
-    argp.add_argument("--username",        dest='deploying_iam_user', type=str, required=False)
-    argp.add_argument("--identity",        dest='identity', type=str, required=False)
-    argp.add_argument("--s3org",           dest='s3_bucket_org', type=str, required=True)
-    argp.add_argument("--auth0client",     dest='auth0_client', type=str, required=False)
-    argp.add_argument("--auth0secret",     dest='auth0_secret', type=str, required=False)
-    argp.add_argument("--recaptchakey",    dest='re_captcha_key', type=str, required=False)
-    argp.add_argument("--recaptchasecret", dest='re_captcha_secret', type=str, required=False)
+    argp.add_argument("--env",             dest='env_name', type=str, action=strip, required=True)
+    argp.add_argument("--awsdir",          dest='aws_dir', type=str, action=strip, default=AWS_DIR, required=False)
+    argp.add_argument("--out",             dest='custom_dir', type=str, action=strip, default=CUSTOM_DIR, required=False)
+    argp.add_argument("--account",         dest='account_number', type=str, action=strip, required=False)
+    argp.add_argument("--username",        dest='deploying_iam_user', type=str, action=strip, required=False)
+    argp.add_argument("--identity",        dest='identity', type=str, action=strip, required=False)
+    argp.add_argument("--s3org",           dest='s3_bucket_org', type=str, action=strip, required=True)
+    argp.add_argument("--auth0client",     dest='auth0_client', type=str, action=strip, required=False)
+    argp.add_argument("--auth0secret",     dest='auth0_secret', type=str, action=strip, required=False)
+    argp.add_argument("--recaptchakey",    dest='re_captcha_key', type=str, action=strip, required=False)
+    argp.add_argument("--recaptchasecret", dest='re_captcha_secret', type=str, action=strip, required=False)
     argp.add_argument("--debug",           dest='debug', action="store_true", required=False)
     argp.add_argument("--yes",             dest='yes', action="store_true", required=False)
     args = argp.parse_args()
 
     if args.debug:
-        print(f"Current directory: {os.getcwd()}")
-        print(f"Current username: {os.environ.get['USER']}")
+        print(f"DEBUG: Current directory: {os.getcwd()}")
+        print(f"DEBUG: Current username: {os.environ.get('USER')}")
+
+    # Since we allow the base ~/.aws_test to be change via --awsdir
+    # we best check that it is not passed as empty.
+
+    if not args.aws_dir:
+        exit_with_no_action(f"There must be an ~/.aws directory specified; default is: {AWS_DIR}")
 
     # Get basic environment info.
 
@@ -217,13 +268,13 @@ def main():
 
     if not args.env_name and args.yes:
         if not current_env:
-            exit_without_doing_anything("No environment specified. Use the --env option to specify this.")
+            exit_with_no_action("No environment specified. Use the --env option to specify this.")
         else:
             args.env_name = current_env
             print(f"No environment specified. Use the --env option to specify this.")
             print(f"Though it looks like your current environment is: {current_env}")
             if not confirm_with_user(f"Do you want to use this ({current_env})?"):
-                exit_without_doing_anything()
+                exit_with_no_action()
 
     # Make sure the environment specified
     # actually exists as a ~/.aws_test.ENV_NAME directory.
@@ -234,24 +285,25 @@ def main():
             print("Available environments:")
             for aws_available_env in sorted(available_envs):
                 print(f"- {aws_available_env} ({env_info.get_dir(aws_available_env)})")
-            exit_without_doing_anything("Choose on of the above environment using the --env option.")
+            exit_with_no_action("Choose on of the above environment using the --env option.")
         else:
-            exit_without_doing_anything \
+            exit_with_no_action \
                (f"No environments found at all.\nYou need to have at least one {env_info.get_base_dir()}.{{ENV_NAME}} directory setup.") 
 
     aws_dir = env_info.get_dir(args.env_name)
-    print(f"Setting up local custom config directory for environment: {args.env_name}")
+    print(f"Setting up 4dn-cloud-infra local custom config directory for environment: {args.env_name}")
     print(f"Your AWS credentials directory: {aws_dir}")
 
     # Create the custom directory; but make sue it doesn't already exist.
 
-    custom_dir = os.path.abspath(args.custom_dir_name)
-    if not custom_dir:
-        exit_without_doing_anything("You must specify a custom output directory using the --out option.")
-    if os.path.exists(custom_dir):
-        exit_without_doing_anything(f"A custom {'directory' if os.path.isdir(custom_dir) else 'file'} already exists: {custom_dir}")
+    if not args.custom_dir:
+        exit_with_no_action("You must specify a custom output directory using the --out option.")
 
-    print(f"Using custom directory: {custom_dir}")
+    args.custom_dir = os.path.abspath(args.custom_dir)
+    if os.path.exists(args.custom_dir):
+        exit_with_no_action(f"A custom {'directory' if os.path.isdir(args.custom_dir) else 'file'} already exists: {args.custom_dir}")
+
+    print(f"Using custom directory: {args.custom_dir}")
 
     # Check all the inputs.
 
@@ -259,37 +311,37 @@ def main():
         env_dir = env_info.get_dir(args.env_name)
         args.account_number = get_fallback_account_number(env_dir)
         if not args.account_number:
-            exit_without_doing_anything("Cannot determine account number. Use the --account option.")
+            exit_with_no_action("Cannot determine account number. Use the --account option.")
     print(f"Using account number: {args.account_number}")
 
     if not args.deploying_iam_user:
         args.deploying_iam_user = get_fallback_deploying_iam_user()
         if not args.deploying_iam_user:
-            exit_without_doing_anything(f"Cannot determine deploying IAM username. Use the --username option.")
+            exit_with_no_action(f"Cannot determine deploying IAM username. Use the --username option.")
     print(f"Using deploying IAM username: {args.deploying_iam_user}")
 
     if not args.identity:
         args.identity = get_fallback_identity(args.env_name)
         if not args.identity:
-            exit_without_doing_anything(f"Cannot determine deploying IAM username. Use the --username option.")
+            exit_with_no_action(f"Cannot determine deploying IAM username. Use the --username option.")
     print(f"Using identity: {args.identity}")
 
     if not args.s3_bucket_org:
-        exit_without_doing_anything(f"You must specify an S3 bucket organization name. Use the --s3org option.")
+        exit_with_no_action(f"You must specify an S3 bucket organization name. Use the --s3org option.")
     print(f"Using S3 bucket organization name: {args.s3_bucket_org}")
 
     if not args.auth0_client:
         print("You must specify a Auth0 client ID using the --auth0client option.")
         args.auth0_client = input("Or enter your Auth0 client ID: ").strip()
         if not args.auth0_client:
-            exit_without_doing_anything(f"You must specify an Auth0 client. Use the --auth0client option.")
+            exit_with_no_action(f"You must specify an Auth0 client. Use the --auth0client option.")
     print(f"Using Auth0 client: {args.auth0_client}")
 
     if not args.auth0_secret:
         print("You must specify a Auth0 secret using the --auth0secret option.")
         args.auth0_secret = input("Or enter your Auth0 secret ID: ").strip()
         if not args.auth0_secret:
-            exit_without_doing_anything(f"You must specify an Auth0 secret. Use the --auth0secret option.")
+            exit_with_no_action(f"You must specify an Auth0 secret. Use the --auth0secret option.")
     print(f"Using Auth0 secret: {args.auth0_secret}")
 
     if args.re_captcha_key:
@@ -300,29 +352,28 @@ def main():
     # Confirm with the user the everything looks okay.
 
     if not args.yes and not confirm_with_user("Confirm the above. Continue with setup?"):
-        exit_without_doing_anything()
+        exit_with_no_action()
 
     # Confirmed. First create the custom directory itself. 
     # TODO: Catch exceptions et cetera
 
-    print(f"Creating directory: {os.path.abspath(custom_dir)}")
-    os.makedirs(custom_dir)
+    print(f"Creating directory: {os.path.abspath(args.custom_dir)}")
+    os.makedirs(args.custom_dir)
 
     # Create the config.json file from the template and the inputs.
     # First we expand the template variables in the config.json file.
     # TODO: template file relative to this script directory?
 
     config_template_file = os.path.join(THIS_SCRIPT_DIR, CONFIG_TEMPLATE_FILE)
-    config_file = os.path.abspath(os.path.join(custom_dir, CONFIG_FILE))
+    config_file = os.path.abspath(os.path.join(args.custom_dir, CONFIG_FILE))
 
     if args.debug:
-        print(f"Config template file: {config_template_file}")
+        print(f"DEBUG: Config template file: {config_template_file}")
 
     if not os.path.isfile(config_template_file):
-        exit_without_doing_anything(f"ERROR: Cannot find config template file! {config_template_file}")
+        exit_with_no_action(f"ERROR: Cannot find config template file! {config_template_file}")
 
     print(f"Creating config file: {os.path.abspath(config_file)}")
-
     expand_json_template_file(config_template_file, config_file,
     {
         ConfigTemplateVars.ACCOUNT_NUMBER.value:     args.account_number,
@@ -337,16 +388,15 @@ def main():
     # TODO: template file relative to this script directory?
 
     secrets_template_file = os.path.join(THIS_SCRIPT_DIR, SECRETS_TEMPLATE_FILE)
-    secrets_file = os.path.abspath(os.path.join(custom_dir, SECRETS_FILE))
+    secrets_file = os.path.abspath(os.path.join(args.custom_dir, SECRETS_FILE))
 
     if args.debug:
-        print(f"Secrets template file: {secrets_template_file}")
+        print(f"DEBUG: Secrets template file: {secrets_template_file}")
 
     if not os.path.isfile(secrets_template_file):
-        exit_without_doing_anything(f"ERROR: Cannot find secrets template file! {secrets_template_file}")
+        exit_with_no_action(f"ERROR: Cannot find secrets template file! {secrets_template_file}")
 
     print(f"Creating secrets file: {secrets_file}")
-
     expand_json_template_file(secrets_template_file, secrets_file,
     {
         SecretsTemplateVars.AUTH0_CLIENT.value:      args.auth0_client,
@@ -357,18 +407,20 @@ def main():
 
     # Create the symlink from custom/aws_creds to ~/.aws_test.ENV_NAME.
 
-    custom_aws_dir = os.path.abspath(os.path.join(custom_dir, CUSTOM_AWS_DIR))
+    custom_aws_dir = os.path.abspath(os.path.join(args.custom_dir, CUSTOM_AWS_DIR))
     print(f"Creating symlink: {custom_aws_dir} -> {aws_dir} ")
     os.symlink(aws_dir, custom_aws_dir)
 
     # Create the S3 encrypt key file (with mode 400).
+    # We will NOT overwrite this if it already exists.
 
-    s3_encrypt_key = generate_s3_encrypt_key()
     s3_encrypt_key_file = os.path.abspath(os.path.join(custom_aws_dir, S3_ENCRYPT_KEY_FILE))
     if os.path.exists(s3_encrypt_key_file):
         print(f"S3 encrypt file already exists: {s3_encrypt_key_file}")
-        print("Not overwriting this!")
+        print("Will NOT overwrite this file!")
     else:
+        s3_encrypt_key = generate_s3_encrypt_key()
+        print(f"Generating S3 encrypt key: {s3_encrypt_key[0]}*******")
         print(f"Creating S3 encrypt file: {s3_encrypt_key_file}")
         with io.open(s3_encrypt_key_file, "w") as s3_encrypt_key_f:
             s3_encrypt_key_f.write(s3_encrypt_key)
@@ -378,7 +430,7 @@ def main():
     # Done. Summarize.
 
     print("Here is your new custom config directory:")
-    print_directory_tree(custom_dir)
+    print_directory_tree(args.custom_dir)
 
 
 if __name__ == "__main__":
