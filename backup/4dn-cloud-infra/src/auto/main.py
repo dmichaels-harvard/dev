@@ -167,7 +167,7 @@ def get_fallback_identity(env_name: str):
         c4_datastore_stack = create_c4_alpha_stack(name='datastore', account=None)
         identity_value = c4_datastore_stack.parts[0].application_configuration_secret().Name
     except Exception as e:
-        identity_value =  "C4Datastore" + camelize(env_name) + "ApplicationConfiguration"
+        identity_value = "C4Datastore" + camelize(env_name) + "ApplicationConfiguration"
 
     return identity_value
 
