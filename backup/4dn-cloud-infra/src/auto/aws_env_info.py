@@ -1,15 +1,17 @@
+# IN PROGRESS / dmichaels / 2022-06-04
+#
+# Testing notes:
+# - External resources accesed by this module:
+#   - filesystem via:
+#     - glob.glob
+#     - os.path.basename
+#     - os.path.expanduser
+#     - os.path.isdir
+#     - os.path.islink
+#     - os.readlink
+
 import os
 import glob
-
-# Testing notes ...
-# External resources accesed by this module:
-# - File System via:
-#   - glob.glob
-#   - os.path.basename
-#   - os.path.expanduser
-#   - os.path.isdir
-#   - os.path.islink
-#   - os.readlink
 
 class AwsEnvInfo:
     """
@@ -26,7 +28,7 @@ class AwsEnvInfo:
     to, if any. The get_available_envs() method returns a list of available
     ENV_NAMEs each of the ~/.aws_test.{ENV_NAME} directories which actually exist.
 
-    May construct with a base directory name other than ~/.aws_test if desired.
+    May pass constructor a base directory name other than ~/.aws_test if desired.
     """
 
     # TOD)
@@ -83,17 +85,3 @@ class AwsEnvInfo:
         """
         if env_name:
             return self.__aws_dir + "." + env_name
-
-
-if __name__ == "__main__":
-    aws_dirs_info = AwsEnvInfo()
-    aws_current_env = aws_dirs_info.get_current_env()
-    if aws_current_env:
-        print(f"Your current AWS (use_test_creds) environment is: {aws_current_env}")
-    else:
-        print(f"You currently have no (use_test_creds) AWS environment set.")
-    aws_available_envs = aws_dirs_info.get_available_envs()
-    if aws_available_envs:
-        print("Available AWS (use_test_creds) environments:")
-        for aws_available_env in sorted(aws_available_envs):
-            print(f"- {aws_available_env}")
