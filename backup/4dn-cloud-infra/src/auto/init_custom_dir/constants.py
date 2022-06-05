@@ -20,7 +20,7 @@ class Files:
 
     @staticmethod
     def get_test_creds_script_file(env_dir: str):
-        return os.path.join(env_dir, Files.TEST_CREDS_SCRIPT_FILE)
+        return os.path.abspath(os.path.join(env_dir, Files.TEST_CREDS_SCRIPT_FILE))
 
     @staticmethod
     def get_config_file(custom_dir: str):
@@ -32,11 +32,11 @@ class Files:
 
     @staticmethod
     def get_config_template_file():
-        return os.path.join(Directories.THIS_SCRIPT_DIR, Files.CONFIG_TEMPLATE_FILE)
+        return os.path.abspath(os.path.join(Directories.THIS_SCRIPT_DIR, Files.CONFIG_TEMPLATE_FILE))
 
     @staticmethod
     def get_secrets_template_file():
-        return os.path.join(Directories.THIS_SCRIPT_DIR, Files.SECRETS_TEMPLATE_FILE)
+        return os.path.abspath(os.path.join(Directories.THIS_SCRIPT_DIR, Files.SECRETS_TEMPLATE_FILE))
 
     @staticmethod
     def get_s3_encrypt_key_file(custom_dir: str):
