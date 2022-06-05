@@ -1,8 +1,10 @@
+# IN PROGRESS / dmichaels / 2022-06-04
+
 import io
 import json
-import re
 import os
-import subprocess
+import secrets 
+import string 
 
 from  dcicutils.misc_utils import json_leaf_subst as expand_json_template
 
@@ -22,16 +24,22 @@ def expand_json_template_file(template_file: str, output_file: str, template_sub
         json.dump(expanded_template_json, output_f, indent=2)
         output_f.write("\n")
 
-def generate_s3_encrypt_key():
+def generate_s3_encrypt_key(nchars = 32):
     """
-    Returns a value suitable for an S3 encrypt key.
-    TODO: Replicating exactly the method used in scripts/create_s3_encrypt_key but
-          should we rather modify that script and call out to it? And if we do do
-          it here then may need to also replicate the openssl version checking.
+    Returns a value suitable for an S3 encryption key.
+    We use the cryptographically secure Python 'secrets' module.
+    See: https://docs.python.org/3/library/secrets.html
     """
-    s3_encrypt_key_command = "openssl enc -aes-128-cbc -k `ps -ax | md5` -P -pbkdf2 -a"
-    s3_encrypt_key_command_output = subprocess.check_output(s3_encrypt_key_command, shell=True).decode("utf-8").strip()
-    return re.compile("key=(.*)\n").search(s3_encrypt_key_command_output).group(1)
+    return "".join(secrets.choice(string.ascii_letters + string.digits) for i in range(nchars))
+
+    # TODO - OLD
+    # Replicating exactly the method used in scripts/create_s3_encrypt_key but
+    # should we rather modify that script and call out to it? And if we do do
+    # it here then may need to also replicate the openssl version checking.
+    #
+    # s3_encrypt_key_command = "openssl enc -aes-128-cbc -k `ps -ax | md5` -P -pbkdf2 -a"
+    # s3_encrypt_key_command_output = subprocess.check_output(s3_encrypt_key_command, shell=True).decode("utf-8").strip()
+    # return re.compile("key=(.*)\n").search(s3_encrypt_key_command_output).group(1)
 
 def confirm_with_user(message: str):
     """

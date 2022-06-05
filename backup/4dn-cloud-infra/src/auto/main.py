@@ -18,9 +18,62 @@
 # The config.json and secrets.json files are created from existing template
 # files and inputs from the user to this script.
 #
+# Command-line options:
+#
+# --env env-name
+#   The ENV_NAME corresponding to an existing ~/.aws_test.{ENV_NAME} directory.
+#   Required.
+#
+# --awsdir your-aws-directory
+#   Use this to change the default AWS base directory from the default: ~/.aws_test
+#
+# --out
+#   Use this to change the default custom directory: custom
+#
+# --account account-number
+#   Use this to specify the (required) 'account_number' for the config.json file.
+#   If not specifed we try to get it from 'ACCOUNT_NUMBER' in test_cred.sh
+#   in the specified AWS directory.
+#
+# --username username
+#   Use this to specify the (required) 'deploying_iam_user' for the config.json file.
+#   If not specifed we try to get it from the $USER environment variable.
+#
+# --identity gac-name
+#   Use this to specify the (required) 'identity' for the config.json file,
+#   e.g. C4DatastoreCgapSupertestApplicationConfiguration.
+#   If not specified we try to get it from the application_configuration_secret
+#   function on stacks.alpha_stacks.create_c4_alpha_stack.
+#
+# --s3org s3-bucket-org
+#   Use this to specify the (required) 's3.bucket.org' for the config.json file.
+#   Required.
+#
+# --auth0client auth0-client
+#   Use this to specify the (required) 'Auth0Client' for the secrets.json file.
+#   Required.
+#
+# --auth0secret auth0-secret
+#   Use this to specify the (required) 'Auth0Secret' for the secrets.json file.
+#   Required.
+#
+# --recaptchakey re-captcha-key
+#   Use this to specify the 'reCaptchakey' for the secrets.json file.
+#
+# --recaptchasecret re-captcha-secret
+#   Use this to specify the 'reCaptchakey' for the secrets.json file.
+#
+# --debug
+#   Use this to turn on debugging output.
+#
+# --yes
+#   Use this to answer yes to any confirmation prompts.
+#   Does not guarantee no prompts if insufficient inputs given.
+#
 # Testing notes:
 # - External resources accesed by this module:
 #   - filesystem via:
+#     - glob.glob
 #     - os.chmod
 #     - os.environ.get
 #     - os.getcwd
@@ -36,6 +89,8 @@
 #     - os.path.join
 #     - os.readlink
 #     - os.symlink
+#   - shell via:
+#     - subprocess.check_output (to execute test_cred.sh)
 
 import argparse
 import io
@@ -294,12 +349,18 @@ def main():
     if not args.identity:
         args.identity = get_fallback_identity(args.env_name)
         if not args.identity:
-            exit_with_no_action(f"Cannot determine deploying IAM username. Use the --username option.")
+            exit_with_no_action(f"Cannot determine identity. Use the --identity option.")
     print(f"Using identity: {args.identity}")
 
     if not args.s3_bucket_org:
         exit_with_no_action(f"You must specify an S3 bucket organization name. Use the --s3org option.")
     print(f"Using S3 bucket organization name: {args.s3_bucket_org}")
+
+
+    # TODO
+    # For these required Auth0 values we prompt for them if not given, just to
+    # see if we like this model (of prompting for required input if not given);
+    # if okay then do similar for the others above.
 
     if not args.auth0_client:
         print("You must specify a Auth0 client ID using the --auth0client option.")
