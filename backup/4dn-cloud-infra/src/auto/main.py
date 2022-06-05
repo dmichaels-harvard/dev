@@ -41,18 +41,21 @@ import argparse
 import io
 import json
 import os
-import re
 import stat
 import subprocess
 
-from  dcicutils.misc_utils import json_leaf_subst as expand_json_template
 from  dcicutils.cloudformation_utils import camelize
 from .aws_env_info import AwsEnvInfo
+from .utils import ( confirm_with_user,
+                     exit_with_no_action,
+                     expand_json_template_file,
+                     generate_s3_encrypt_key,
+                     print_directory_tree)
 
 AWS_DIR                = "~/.aws_test"
 TEST_CREDS_SCRIPT_FILE = "test_creds.sh"
 CUSTOM_DIR             = "custom"
-CUSTOM_AWS_DIR         = "aws_creds"
+CUSTOM_AWS_CREDS_DIR   = "aws_creds"
 CONFIG_FILE            = "config.json"
 SECRETS_FILE           = "secrets.json"
 CONFIG_TEMPLATE_FILE   = "templates/config.json.template"
@@ -73,18 +76,25 @@ class SecretsTemplateVars:
     RE_CAPTCHA_KEY     = "__TEMPLATE_VALUE_RE_CAPTCHA_KEY__"
     RE_CAPTCHA_SECRET  = "__TEMPLATE_VALUE_RE_CAPTCHA_SECRET__"
 
-def get_fallback_account_number(aws_dir: str):
+def get_test_creds_script_file(env_dir: str):
+    """
+    Return the full path the the test_creds.sh file in the given environment directory.
+    """
+    return os.path.join(env_dir, TEST_CREDS_SCRIPT_FILE)
+
+def get_fallback_account_number(env_dir: str):
     """
     Obtains/returns the account_number value by executing the test_creds.sh
     file in the chosen (use_test_creds) AWS environment and grabbing the value
     of the ACCOUNT_NUMBER environment value which is likely to be set there.
-    :param aws_dir: The AWS envronment directory path.
+    :param env_dir: The AWS envronment directory path.
     """
     try:
-        test_creds_script_file = os.path.join(aws_dir, TEST_CREDS_SCRIPT_FILE)
+        test_creds_script_file = get_test_creds_script_file(env_dir)
+        if not os.path.isfile(test_creds_script_file):
+            return None
         command = f"source {test_creds_script_file} ; echo $ACCOUNT_NUMBER"
-        command_output = str(subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT).decode("utf-8")).strip()
-        return command_output
+        return str(subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT).decode("utf-8")).strip()
     except Exception as e:
         return None
 
@@ -166,72 +176,27 @@ def get_fallback_identity(env_name: str):
         c4_datastore_stack = create_c4_alpha_stack(name='datastore', account=None)
         identity_value = c4_datastore_stack.parts[0].application_configuration_secret().Name
     except Exception as e:
+        #
+        # TODO
+        # Fall back to this?
+        #
         identity_value = "C4Datastore" + camelize(env_name) + "ApplicationConfiguration"
 
     return identity_value
 
-def expand_json_template_file(template_file: str, output_file: str, template_substitutions: dict):
-    with io.open(template_file, "r") as template_f:
-        template_file_json = json.load(template_f)
-    expanded_template_json = expand_json_template(template_file_json, template_substitutions)
-    with io.open(output_file, "w") as output_f:
-        json.dump(expanded_template_json, output_f, indent=2)
-        output_f.write("\n")
-
-def generate_s3_encrypt_key():
-    """
-    Returns a value suitable for an S3 encrypt key.
-    TODO: Replicating exactly the method used in scripts/create_s3_encrypt_key but
-          should we rather modify that script and call out to it? And if we do do
-          it here then may need to also replicate the openssl version checking.
-    """
-    s3_encrypt_key_command = "openssl enc -aes-128-cbc -k `ps -ax | md5` -P -pbkdf2 -a"
-    s3_encrypt_key_command_output = subprocess.check_output(s3_encrypt_key_command, shell=True).decode("utf-8").strip()
-    return re.compile("key=(.*)\n").search(s3_encrypt_key_command_output).group(1)
-
-def confirm_with_user(message: str):
-    input_answer = input(message + " (yes|no) ").strip().lower()
-    if input_answer == "yes":
-        return True
-    return False
-
-def exit_with_no_action(message: str = "", status: int = 1):
-    if message:
-        print(message)
-    print("Exiting without doing anything.")
-    exit(status)
-
-def print_directory_tree(directory: str):
-    """
-    Prints the given directory as a tree. Taken/adapted from:
-    https://stackoverflow.com/questions/9727673/list-directory-tree-structure-in-python
-    """
-    def tree_generator(directory, prefix: str = ''):
-        space = '    ' ; branch = '│   ' ; tee = '├── ' ; last = '└── '
-        contents = [os.path.join(directory, item) for item in os.listdir(directory)]
-        pointers = [tee] * (len(contents) - 1) + [last]
-        for pointer, path in zip(pointers, contents):
-            symlink = "@ ─> " + os.readlink(path) if os.path.islink(path) else ""
-            yield prefix + pointer + os.path.basename(path) + symlink
-            if os.path.isdir(path):
-                extension = branch if pointer == tee else space 
-                yield from tree_generator(path, prefix=prefix+extension)
-    print('└─ ' + directory)
-    for line in tree_generator(directory, prefix='   '): print(line)
-
 def main():
 
     # Setup/parse arguments.
-    # Strip whitespace to ensure we don't get passed odd/empty values.
-    # TODO: Must be better way to do this than creating class or manually doing it post hoc.
+    # Strip whitespace to ensure we don't get passed odd/empty values (e.g. --env '').
+    # TODO: Must be better way than creating class, or manually post hoc.
 
     class strip(argparse.Action):
         def __call__(self, parser, namespace, values, option_string=None):
             setattr(namespace, self.dest, values.strip())
     argp = argparse.ArgumentParser()
     argp.add_argument("--env",             dest='env_name', type=str, action=strip, required=True)
-    argp.add_argument("--awsdir",          dest='aws_dir', type=str, action=strip, default=AWS_DIR, required=False)
-    argp.add_argument("--out",             dest='custom_dir', type=str, action=strip, default=CUSTOM_DIR, required=False)
+    argp.add_argument("--awsdir",          dest='aws_dir', type=str, action=strip, required=False, default=AWS_DIR)
+    argp.add_argument("--out",             dest='custom_dir', type=str, action=strip, required=False, default=CUSTOM_DIR)
     argp.add_argument("--account",         dest='account_number', type=str, action=strip, required=False)
     argp.add_argument("--username",        dest='deploying_iam_user', type=str, action=strip, required=False)
     argp.add_argument("--identity",        dest='identity', type=str, action=strip, required=False)
@@ -254,11 +219,16 @@ def main():
     if not args.aws_dir:
         exit_with_no_action(f"There must be an ~/.aws directory specified; default is: {AWS_DIR}")
 
-    # Get basic environment info.
+    # Get basic AWS credentials environment info.
 
     env_info       = AwsEnvInfo(AWS_DIR)
-    current_env    = env_info.get_current_env()
-    available_envs = env_info.get_available_envs()
+    current_env    = env_info.current_env
+    available_envs = env_info.available_envs
+
+    if args.debug:
+        print(f"DEBUG: AWS directory: {env_info.dir}")
+        print(f"DEBUG: AWS environments: {env_info.available_envs}")
+        print(f"DEBUG: AWS current environment: {env_info.current_env}")
 
     # Make sure the AWS environment name given is good.
     # Required but just in case not set anyways, check current
@@ -277,24 +247,24 @@ def main():
                 exit_with_no_action()
 
     # Make sure the environment specified
-    # actually exists as a ~/.aws_test.ENV_NAME directory.
+    # actually exists as a ~/.aws_test.{ENV_NAME} directory.
 
     if not args.env_name or args.env_name not in available_envs:
         print(f"No environment for this name exists: {args.env_name}")
         if available_envs:
             print("Available environments:")
-            for aws_available_env in sorted(available_envs):
-                print(f"- {aws_available_env} ({env_info.get_dir(aws_available_env)})")
+            for available_env in sorted(available_envs):
+                print(f"- {available_env} ({env_info.get_dir(available_env)})")
             exit_with_no_action("Choose one of the above environment using the --env option.")
         else:
             exit_with_no_action \
-               (f"No environments found at all.\nYou need to have at least one {env_info.get_base_dir()}.{{ENV_NAME}} directory setup.") 
+               (f"No environments found at all.\nYou need to have at least one {env_info.dir}.{{ENV_NAME}} directory setup.") 
 
-    aws_dir = env_info.get_dir(args.env_name)
+    env_dir = env_info.get_dir(args.env_name)
     print(f"Setting up 4dn-cloud-infra local custom config directory for environment: {args.env_name}")
-    print(f"Your AWS credentials directory: {aws_dir}")
+    print(f"Your AWS credentials directory: {env_dir}")
 
-    # Create the custom directory; but make sue it doesn't already exist.
+    # Determine the custom directory; make sure it doesn't already exist.
 
     if not args.custom_dir:
         exit_with_no_action("You must specify a custom output directory using the --out option.")
@@ -308,7 +278,8 @@ def main():
     # Check all the inputs.
 
     if not args.account_number:
-        env_dir = env_info.get_dir(args.env_name)
+        if args.debug:
+            print(f"DEBUG: Trying to get account number from: {get_test_creds_script_file(env_dir)}")
         args.account_number = get_fallback_account_number(env_dir)
         if not args.account_number:
             exit_with_no_action("Cannot determine account number. Use the --account option.")
@@ -354,14 +325,13 @@ def main():
     if not args.yes and not confirm_with_user("Confirm the above. Continue with setup?"):
         exit_with_no_action()
 
-    # Confirmed. First create the custom directory itself. 
-    # TODO: Catch exceptions et cetera
+    # Confirmed.
+    # First create the custom directory itself (already checked it does not yet exist).
 
     print(f"Creating directory: {os.path.abspath(args.custom_dir)}")
     os.makedirs(args.custom_dir)
 
     # Create the config.json file from the template and the inputs.
-    # First we expand the template variables in the config.json file.
     # TODO: template file relative to this script directory?
 
     config_template_file = os.path.join(THIS_SCRIPT_DIR, CONFIG_TEMPLATE_FILE)
@@ -384,7 +354,6 @@ def main():
     })
 
     # Create the secrets.json file from the template and the inputs.
-    # First we expand the template variables in the secrets.json file.
     # TODO: template file relative to this script directory?
 
     secrets_template_file = os.path.join(THIS_SCRIPT_DIR, SECRETS_TEMPLATE_FILE)
@@ -407,14 +376,14 @@ def main():
 
     # Create the symlink from custom/aws_creds to ~/.aws_test.ENV_NAME.
 
-    custom_aws_dir = os.path.abspath(os.path.join(args.custom_dir, CUSTOM_AWS_DIR))
-    print(f"Creating symlink: {custom_aws_dir} -> {aws_dir} ")
-    os.symlink(aws_dir, custom_aws_dir)
+    custom_aws_creds_dir = os.path.abspath(os.path.join(args.custom_dir, CUSTOM_AWS_CREDS_DIR))
+    print(f"Creating symlink: {custom_aws_creds_dir} -> {env_dir} ")
+    os.symlink(env_dir, custom_aws_creds_dir)
 
     # Create the S3 encrypt key file (with mode 400).
     # We will NOT overwrite this if it already exists.
 
-    s3_encrypt_key_file = os.path.abspath(os.path.join(custom_aws_dir, S3_ENCRYPT_KEY_FILE))
+    s3_encrypt_key_file = os.path.abspath(os.path.join(custom_aws_creds_dir, S3_ENCRYPT_KEY_FILE))
     if os.path.exists(s3_encrypt_key_file):
         print(f"S3 encrypt file already exists: {s3_encrypt_key_file}")
         print("Will NOT overwrite this file!")
