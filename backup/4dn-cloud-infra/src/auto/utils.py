@@ -24,13 +24,13 @@ def expand_json_template_file(template_file: str, output_file: str, template_sub
         json.dump(expanded_template_json, output_f, indent=2)
         output_f.write("\n")
 
-def generate_s3_encrypt_key(nchars = 32):
+def generate_s3_encrypt_key(length = 32):
     """
     Returns a value suitable for an S3 encryption key.
     We use the cryptographically secure Python 'secrets' module.
     See: https://docs.python.org/3/library/secrets.html
     """
-    return "".join(secrets.choice(string.ascii_letters + string.digits) for i in range(nchars))
+    return "".join(secrets.choice(string.ascii_letters + string.digits) for i in range(length))
 
     # TODO - OLD
     # Replicating exactly the method used in scripts/create_s3_encrypt_key but
@@ -64,7 +64,7 @@ def print_directory_tree(directory: str):
     """
     def tree_generator(directory, prefix: str = ''):
         space = '    ' ; branch = '│   ' ; tee = '├── ' ; last = '└── '
-        contents = [os.path.join(directory, item) for item in os.listdir(directory)]
+        contents = [os.path.join(directory, item) for item in sorted(os.listdir(directory))]
         pointers = [tee] * (len(contents) - 1) + [last]
         for pointer, path in zip(pointers, contents):
             symlink = "@ ─> " + os.readlink(path) if os.path.islink(path) else ""

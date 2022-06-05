@@ -41,6 +41,9 @@ class AwsEnvInfo:
     def __init__(self, aws_dir = __DEFAULT_AWS_DIR):
         if not aws_dir:
             aws_dir = AwsEnvInfo.__DEFAULT_AWS_DIR
+        #
+        # FYI: os.path.expanduser expands tilde (~) even on Windows.
+        #
         self.__aws_dir = os.path.expanduser(aws_dir)
 
     def __get_dirs(self):
@@ -67,7 +70,7 @@ class AwsEnvInfo:
     @property
     def dir(self):
         """
-        Returns the full path to the ~/.aws_test directory (from constructor).
+        Returns the full path to the ~/.aws_test (__aws_dir) directory (from constructor).
         """
         return self.__aws_dir
 
