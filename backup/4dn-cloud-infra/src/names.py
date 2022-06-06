@@ -1,6 +1,11 @@
-from .constants import APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX, COMMON_STACK_PREFIX, COMMON_STACK_PREFIX_CAMEL_CASE, DATASTORE_STACK_TITLE_TOKEN
 from dcicutils.cloudformation_utils import camelize
 from dcicutils.misc_utils import remove_prefix
+
+from .constants import APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX, COMMON_STACK_PREFIX, COMMON_STACK_PREFIX_CAMEL_CASE, DATASTORE_STACK_NAME_TOKEN, DATASTORE_STACK_TITLE_TOKEN
+#
+# How about factoring out C4Name entirely into own module (as probably should be anyways).
+from .c4name import C4Name
+
 
 # Factored out of C4Name for common usage to for get_global_application_configuration_secret_name,
 # above, so we can get the GAC name (from the init-custom-dir script) without importing
@@ -31,10 +36,15 @@ def get_logical_id(resource, context="", string_to_trim=None, logical_id_prefix=
         res = resource_name
     return res
 
-def get_suggest_stack_name():
-    pass
+def get_suggest_stack_name(title_token, name_token, qualifier):
+        qualifier_suffix = f"-{qualifier}"
+        qualifier_camel = camelize(qualifier)
+        return C4Name(name=f'{COMMON_STACK_PREFIX}{name_token}{qualifier_suffix}',
+                      title_token=(f'{COMMON_STACK_PREFIX_CAMEL_CASE}{title_token}{qualifier_camel}'
+                                   if title_token else None),
+                      string_to_trim=qualifier_camel)
 
-def get_global_application_configuration_secret_name(env_name: str) -> str:
+def get_global_application_configuration_secret_name_first_try(env_name: str) -> str:
     def logical_id(resource: str, context = "") -> str:
         #
         # This is supposed to replicate C4Name.logical_id in part.py
@@ -118,7 +128,22 @@ def get_global_application_configuration_secret_name(env_name: str) -> str:
     return get_logical_id(resource=resource_name, string_to_trim=string_to_trim, logical_id_prefix=logical_id_prefix)
     #return get_logical_id(resource=camelize(env_name) + APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX, string_to_trim=camelize(env_name), logical_id_prefix=DATASTORE_STACK_TITLE_TOKEN)
 
-# These are from C4Name ...
+def get_global_application_configuration_secret_name(env_name: str, c4name: C4Name = None) -> str:
+        #
+        # Create C4Name like it gets created in part.py/StackNameMixin.suggest_stack_name("datastore")
+        #
+        # This is the call if datastore.py/application_configuration_secret() we want to replicate ...
+        # self.name.logical_id(camelize(ConfigManager.get_config_setting(Settings.ENV_NAME)) + self.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX)
+        #
+        if not c4name:
+            title_token = DATASTORE_STACK_TITLE_TOKEN # Datastore
+            name_token = DATASTORE_STACK_NAME_TOKEN # datastore
+            qualifier = env_name
+            c4name = get_suggest_stack_name(title_token, name_token, qualifier)
+        return c4name.logical_id(camelize(env_name) + APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX)
+
+# ----------------------------------------------------------------------------------------------------------------------
+# This is from part.py/C4Name ...
 # ----------------------------------------------------------------------------------------------------------------------
 #   def logical_id(self, resource, context=""):
 #       """ Build the Cloud Formation 'Logical Id' for a resource.
@@ -138,6 +163,8 @@ def get_global_application_configuration_secret_name(env_name: str) -> str:
 #       # print(f"{context}{self}.logical_id({resource!r}) => {res}")
 #       return res
 # ----------------------------------------------------------------------------------------------------------------------
+# This is from part.py/StackNameMixin
+# ----------------------------------------------------------------------------------------------------------------------
 #   @classmethod
 #   def suggest_stack_name(cls, name=None):
 #       title_token = cls.stack_title_token()
@@ -150,12 +177,51 @@ def get_global_application_configuration_secret_name(env_name: str) -> str:
 #                                  if title_token else None),
 #                     string_to_trim=qualifier_camel)
 # ----------------------------------------------------------------------------------------------------------------------
+# This is from datastore.py/C4Datastore
+# ----------------------------------------------------------------------------------------------------------------------
+#   def application_configuration_secret(self) -> Secret:
+#       """ Returns the application configuration secret. Note that this pushes up just a
+#           template - you must fill it out according to the specification in the README.
+#       """
+#       identity = ConfigManager.get_config_setting(Settings.IDENTITY)  # will use setting from config
+#       if not identity:
+#           identity = self.name.logical_id(camelize(ConfigManager.get_config_setting(Settings.ENV_NAME)) + self.APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX)
+#       return Secret(
+#           identity,
+#           Name=identity,
+#           Description='This secret defines the application configuration for the orchestrated environment.',
+#           SecretString=json.dumps(self.application_configuration_template(), indent=2),
+#           Tags=self.tags.cost_tag_array()
+#       )
 #
-# And this is what we can replace the above with:
+# ----------------------------------------------------------------------------------------------------------------------
+# And this is what we can replace the above with (... though maybe nevermind about C4Name.logcal_id if we factor just that out into own module and use)
 # ----------------------------------------------------------------------------------------------------------------------
 #   from .names import get_logical_id
 #   def logical_id(self, resource, context=""):
 #       return get_logical_id(resource, context, string_to_trim=self.string_to_trim, logical_id_prefix=self.logical_id_prefix)
 #
 # ----------------------------------------------------------------------------------------------------------------------
+#   from .names import get_suggest_stack_name
 #   def suggest_stack_name(cls, name=None):
+#       title_token = cls.stack_title_token()
+#       name_token = cls.STACK_NAME_TOKEN
+#       qualifier = cls.suggest_sharing_qualifier()
+#       return get_suggest_stack_name(title_token, name_token, qualifier)
+#
+# ----------------------------------------------------------------------------------------------------------------------
+#   from .names import get_global_application_configuration_secret_name
+#   def application_configuration_secret(self) -> Secret:
+#       """ Returns the application configuration secret. Note that this pushes up just a
+#           template - you must fill it out according to the specification in the README.
+#       """
+#       identity = ConfigManager.get_config_setting(Settings.IDENTITY)  # will use setting from config
+#       if not identity:
+#           identity = get_global_application_configuration_secret_name(camelize(ConfigManager.get_config_setting(Settings.ENV_NAME)), self.name)
+#       return Secret(
+#           identity,
+#           Name=identity,
+#           Description='This secret defines the application configuration for the orchestrated environment.',
+#           SecretString=json.dumps(self.application_configuration_template(), indent=2),
+#           Tags=self.tags.cost_tag_array()
+#       )

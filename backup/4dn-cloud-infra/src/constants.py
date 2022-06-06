@@ -114,6 +114,7 @@ class Settings:
 # ConfigManager.get_config_setting at global level in base.py.
 
 DATASTORE_STACK_TITLE_TOKEN = "Datastore" # TODO: from datastore.py/STACK_TITLE_TOKEN (diff name cause in StackNameMixin.STACK_TITLE_TOKEN) in - replace there with this one
+DATASTORE_STACK_NAME_TOKEN = "datastore" # TODO: from datastore.py/STACK_TITLE_TOKEN (diff name cause in StackNameMixin.STACK_TITLE_TOKEN) in - replace there with this one
 COMMON_STACK_PREFIX = "c4-" # TODO: from base.py used also in datastore.py, part.py, alpha_stacks.py (commented out) - replace there with this one
 COMMON_STACK_PREFIX_CAMEL_CASE = "C4" # TODO: from base.py used also in part.py, alpha_stacks.py (commented out) - replace there with this one
 APPLICATION_CONFIGURATION_SECRET_NAME_SUFFIX = 'ApplicationConfiguration'
