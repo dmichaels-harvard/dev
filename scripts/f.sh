@@ -6,14 +6,16 @@
 # usage: f.sh search_string [file_pattern]
 #             [--text]
 #             [--list]
+#             [--num]
 #             [--dryrun]
 #             [--quiet]
 #             [--exclude directory_names_to_exclude...]
 #
 # The --text option turns on the grep -I option which skips binary files.
 # The --list option turns on the grep -l option which only lists file names/paths matched.
+# The --num option turns on the grep -n option which includes line numbers.
 # The --exclude option can be used to list one or more directory names to skip in the search.
-# The --dry option can be used to just to see the find command that would be run.
+# The --dryrun option can be used to just to see the find command that would be run.
 # --------------------------------------------------------------------------------------------------
 
 THIS_SCRIPT_NAME=`basename $0`
@@ -34,6 +36,7 @@ FILE_PATTERN=
 EXCLUDE_OPTION=
 EXCLUDE_DIRS=
 LIST_FILES_ONLY=
+LINE_NUMBERS=
 DRYRUN=
 QUIET=
 DEBUG=
@@ -56,11 +59,14 @@ while [ $# -gt 0 ]; do
         fi
         GREP=$2
         shift 2
-    elif [ "$1" = "--text" -o "$1" = "--text" -o "$1" = "--t" -o "$1" = "-t" ]; then
+    elif [ "$1" = "--text" -o "$1" = "-text" -o "$1" = "--t" -o "$1" = "-t" ]; then
         TEXT_FILES_ONLY="-I"
         shift 1
     elif [ "$1" = "--list" -o "$1" = "-list" -o "$1" = "--l" -o "$1" = "-l" ]; then
         LIST_FILES_ONLY='-l'
+        shift 1
+    elif [ "$1" = "--num" -o "$1" = "--um" -o "$1" = "--n" -o "$1" = "-n" ]; then
+        LINE_NUMBERS="-n"
         shift 1
     elif [ "$1" = "--py" -o "$1" = "-py" ]; then
         #
@@ -118,7 +124,7 @@ if [ -z "$SEARCH_FOR"  ]; then
     usage
 fi
 
-COMMAND="find . -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP $LIST_FILES_ONLY $TEXT_FILES_ONLY -H \"$SEARCH_FOR\" {} \;"
+COMMAND="find . -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP $LIST_FILES_ONLY $TEXT_FILES_ONLY $LINE_NUMBERS -H \"$SEARCH_FOR\" {} \;"
 
 if [ ! -z $DEBUG ]; then
     echo "SEARCH_FOR:[${SEARCH_FOR}]"
