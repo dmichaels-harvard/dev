@@ -125,6 +125,7 @@ if [ -z "$SEARCH_FOR"  ]; then
 fi
 
 COMMAND="find . -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP $LIST_FILES_ONLY $TEXT_FILES_ONLY $LINE_NUMBERS -H \"$SEARCH_FOR\" {} \;"
+COMMAND=`echo $COMMAND | tr -s ' '`
 
 if [ ! -z $DEBUG ]; then
     echo "SEARCH_FOR:[${SEARCH_FOR}]"
