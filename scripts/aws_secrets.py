@@ -6,16 +6,16 @@
 # option to see the actualy secret keys/values for each secret name.
 # Values are obfuscated if they look like they represent true secrets.
 #
-# usage: aws-secrets [--names secret-name-pattern] [--secrets] [--show]
+# usage: aws-secrets [--names secret-name-pattern] [--secrets [secret-key-pattern]] [--show]
 #
 # If --name with a simple pattern is given then limit secrets to those
 # whose name contains the specified simple pattern (case-insensitive).
 #
 # If --secrets is given then the secret keys/values are printed for each secret.
-# Secret values with names that look senstive ("secret" or "password" etc) are obfuscated.
-#
-# If --secret with a simple pattern is given then limit secret key/values
+# If a simple pattern is given after this then limit secret keys/values 
 # to those whose key contains the specified simple pattern (case-insensitive).
+#
+# N.B. Secret values with names that look senstive ("secret" or "password" etc) are obfuscated.
 #
 # If --show is given the prints obfuscated values in plaintext.
 # --------------------------------------------------------------------------------------------------
@@ -24,6 +24,7 @@ import argparse
 import boto3
 import json
 import re
+
 
 def print_aws_secrets(secret_name_pattern: str = None, secret_key_name_pattern: str = None, show: bool = False):
     """
@@ -111,21 +112,15 @@ def print_aws_secrets(secret_name_pattern: str = None, secret_key_name_pattern: 
                     secret_value = obfuscate(secret_value)
                 print(f"- {secret_key_name}: {secret_value}")
 
+
 def main():
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("--name", type=str, required=False)
-    #
-    # How can we make --secret take an *optional* argument,
-    # so we can not have both '--secrets' and '--secret pattern'?
-    #
-    args_parser.add_argument("--secret", type=str, required=False)
-    args_parser.add_argument("--secrets", action="store_true", required=False)
+    args_parser.add_argument('--secrets', type=str, const='.*', nargs='?')
     args_parser.add_argument("--show", action="store_true", required=False)
     args = args_parser.parse_args()
-    secret_key_name_pattern = args.secret
-    if not secret_key_name_pattern and args.secrets:
-        secret_key_name_pattern = ".*"
-    print_aws_secrets(secret_name_pattern=args.name, secret_key_name_pattern=secret_key_name_pattern, show=args.show)
+    print_aws_secrets(secret_name_pattern=args.name, secret_key_name_pattern=args.secrets, show=args.show)
+
 
 if __name__ == "__main__":
     main()
