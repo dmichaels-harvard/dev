@@ -40,6 +40,7 @@ LINE_NUMBERS=
 DRYRUN=
 QUIET=
 DEBUG=
+VIM=
 
 while [ $# -gt 0 ]; do
     if [ "$1" = "--help" -o "$1" = "-help" ]; then
@@ -48,6 +49,10 @@ while [ $# -gt 0 ]; do
         DRYRUN=1
         shift 1
     elif [ "$1" = "--quiet" -o "$1" = "-quiet" -o "$1" = "--q" -o "$1" = "-q" ]; then
+        QUIET=1
+        shift 1
+    elif [ "$1" = "--vi" -o "$1" = "-vi" -o "$1" = "--vim" -o "$1" = "-vim" ]; then
+        VIM=1
         QUIET=1
         shift 1
     elif [ "$1" = "--debug" -o "$1" = "-debug" ]; then
@@ -144,6 +149,13 @@ fi
 
 if [ -z $QUIET ]; then
     echo "RUN: $COMMAND"
+fi
+
+if [ ! -z $VIM ]; then
+    TMPFILE=/tmp/tmp-f.sh-$$
+    eval $COMMAND > $TMPFILE 2>&1
+    vi $TMPFILE
+    exit 0
 fi
 
 eval $COMMAND

@@ -46,7 +46,7 @@ def print_aws_stacks(name: str, outputs: str, resources: str, parameters: str, v
         if name and not name.lower() in stack_name.lower():
             continue
         stack_updated = stack["LastUpdatedTime"]
-        print("%-15s (updated: %s)" % (stack_name, stack_updated.astimezone().strftime("%Y:%m:%d %H:%M:%S")))
+        print("%-15s (updated: %s)" % (stack_name, stack_updated.astimezone().strftime("%Y-%m-%d %H:%M:%S")))
         if outputs:
             for stack_output in sorted(stack["Outputs"], key=lambda key: key["OutputKey"]):
                 stack_output_key = stack_output["OutputKey"]
