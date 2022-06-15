@@ -157,6 +157,7 @@ if [ ! -z $VIM ]; then
     TMPFILE=/tmp/tmp-f.sh-$$
     eval $COMMAND > $TMPFILE 2>&1
     vi $TMPFILE
+    rm $TMPFILE
     exit 0
 fi
 
