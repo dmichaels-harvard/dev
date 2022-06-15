@@ -24,6 +24,8 @@ function usage() {
     echo "usage: ${THIS_SCRIPT_NAME}"
     echo "       search_string [file_pattern]"
     echo "       [--text]"
+    echo "       [--list]"
+    echo "       [--num]"
     echo "       [--dryrun]"
     echo "       [--exclude directory_names_to_exclude...]"
     exit 1
