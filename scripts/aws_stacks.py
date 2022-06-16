@@ -34,14 +34,14 @@
 
 import argparse
 import boto3
-import json
 import re
 
 
 def print_aws_stacks(name: str, outputs: str, resources: str, parameters: str, verbose: bool):
 
     c4 = boto3.client('cloudformation')
-    for stack in c4.describe_stacks()["Stacks"]:
+    stacks = c4.describe_stacks()["Stacks"]
+    for stack in stacks:
         stack_name = stack["StackName"]
         if name and not name.lower() in stack_name.lower():
             continue
@@ -57,7 +57,7 @@ def print_aws_stacks(name: str, outputs: str, resources: str, parameters: str, v
         if outputs:
             stack_outputs = stack.get("Outputs")
             if stack_outputs:
-                for stack_output in sorted(stack["Outputs"], key=lambda key: key["OutputKey"]):
+                for stack_output in sorted(stack_outputs, key=lambda key: key["OutputKey"]):
                     stack_output_key = stack_output["OutputKey"]
                     if outputs and not re.search(outputs, stack_output_key, re.IGNORECASE):
                         continue
@@ -75,6 +75,59 @@ def print_aws_stacks(name: str, outputs: str, resources: str, parameters: str, v
                 print("- %s: %s" % (stack_resource_name, stack_resource_type))
         elif parameters:
             stack_parameters = stack.get("Parameters")
+            if stack_parameters:
+                for stack_parameter in sorted(stack_parameters, key=lambda key: key["ParameterKey"]):
+                    stack_parameter_key = stack_parameter["ParameterKey"]
+                    if parameters and not re.search(parameters, stack_parameter_key, re.IGNORECASE):
+                        continue
+                    stack_parameter_value = stack_parameter["ParameterValue"]
+                    print(" - %s: %s" % (stack_parameter_key, stack_parameter_value))
+
+
+# https://www.learnaws.org/2021/02/24/boto3-resource-client/#:~:text=Clients%20vs%20Resources,when%20interacting%20with%20AWS%20services.
+# Resources are higher-level abstractions of AWS services compared to clients.
+# Resources are the recommended pattern to use boto3 as you don’t have to worry
+# about a lot of the underlying details when interacting with AWS services.
+
+def print_aws_stacks_using_resource(name: str, outputs: str, resources: str, parameters: str, verbose: bool):
+
+    c4 = boto3.resource('cloudformation')
+    stacks = c4.stacks.all()
+    for stack in stacks:
+        stack_name = stack.name
+        if name and not name.lower() in stack_name.lower():
+            continue
+        stack_updated = stack.last_updated_time
+        if stack_updated:
+            print("%-15s (updated: %s)" % (stack_name, stack_updated.astimezone().strftime("%Y-%m-%d %H:%M:%S")))
+        else:
+            stack_created = stack.creation_time
+            if stack_created:
+                print("%-15s (created: %s)" % (stack_name, stack_created.astimezone().strftime("%Y-%m-%d %H:%M:%S")))
+            else:
+                print("%-15s" % (stack_name))
+        if outputs:
+            stack_outputs = stack.outputs
+            if stack_outputs:
+                for stack_output in sorted(stack_outputs, key=lambda key: key["OutputKey"]):
+                    stack_output_key = stack_output["OutputKey"]
+                    if outputs and not re.search(outputs, stack_output_key, re.IGNORECASE):
+                        continue
+                    stack_output_value = stack_output["OutputValue"]
+                    stack_output_export_name = stack_output.get("ExportName")
+                    print(" - %s: %s" % (stack_output_key, stack_output_value))
+                    if verbose and stack_output_export_name:
+                        print("   %s (export name)" % (stack_output_export_name))
+        elif resources:
+            stack_resources = stack.resource_summaries.all()
+            for stack_resource in sorted(stack_resources, key=lambda key: key.logical_resource_id.lower()):
+                stack_resource_name = stack_resource.logical_resource_id
+                stack_resource_type = stack_resource.resource_type
+                if resources and not re.search(resources, stack_resource_name, re.IGNORECASE):
+                    continue
+                print("- %s: %s" % (stack_resource_name, stack_resource_type))
+        elif parameters:
+            stack_parameters = stack.parameters
             if stack_parameters:
                 for stack_parameter in sorted(stack_parameters, key=lambda key: key["ParameterKey"]):
                     stack_parameter_key = stack_parameter["ParameterKey"]
@@ -119,7 +172,8 @@ def main():
         print(" / parameter names containing: " + args.parameters, end = "")
     print()
 
-    print_aws_stacks(args.name, args.outputs, args.resources, args.parameters, args.verbose)
+    print_aws_stacks_using_resource(args.name, args.outputs, args.resources, args.parameters, args.verbose)
+#   print_aws_stacks(args.name, args.outputs, args.resources, args.parameters, args.verbose)
 
 
 if __name__ == "__main__":
