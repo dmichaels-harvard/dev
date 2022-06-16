@@ -45,18 +45,27 @@ def print_aws_stacks(name: str, outputs: str, resources: str, parameters: str, v
         stack_name = stack["StackName"]
         if name and not name.lower() in stack_name.lower():
             continue
-        stack_updated = stack["LastUpdatedTime"]
-        print("%-15s (updated: %s)" % (stack_name, stack_updated.astimezone().strftime("%Y-%m-%d %H:%M:%S")))
+        stack_updated = stack.get("LastUpdatedTime")
+        if stack_updated:
+            print("%-15s (updated: %s)" % (stack_name, stack_updated.astimezone().strftime("%Y-%m-%d %H:%M:%S")))
+        else:
+            stack_created = stack.get("CreationTime")
+            if stack_created:
+                print("%-15s (created: %s)" % (stack_name, stack_created.astimezone().strftime("%Y-%m-%d %H:%M:%S")))
+            else:
+                print("%-15s" % (stack_name))
         if outputs:
-            for stack_output in sorted(stack["Outputs"], key=lambda key: key["OutputKey"]):
-                stack_output_key = stack_output["OutputKey"]
-                if outputs and not re.search(outputs, stack_output_key, re.IGNORECASE):
-                    continue
-                stack_output_value = stack_output["OutputValue"]
-                stack_output_export_name = stack_output.get("ExportName")
-                print(" - %s: %s" % (stack_output_key, stack_output_value))
-                if verbose and stack_output_export_name:
-                    print("   %s (export name)" % (stack_output_export_name))
+            stack_outputs = stack.get("Outputs")
+            if stack_outputs:
+                for stack_output in sorted(stack["Outputs"], key=lambda key: key["OutputKey"]):
+                    stack_output_key = stack_output["OutputKey"]
+                    if outputs and not re.search(outputs, stack_output_key, re.IGNORECASE):
+                        continue
+                    stack_output_value = stack_output["OutputValue"]
+                    stack_output_export_name = stack_output.get("ExportName")
+                    print(" - %s: %s" % (stack_output_key, stack_output_value))
+                    if verbose and stack_output_export_name:
+                        print("   %s (export name)" % (stack_output_export_name))
         elif resources:
             for stack_resource in sorted(c4.describe_stack_resources(StackName=stack_name)["StackResources"], key=lambda key: key["LogicalResourceId"].lower()):
                 stack_resource_name = stack_resource["LogicalResourceId"]
