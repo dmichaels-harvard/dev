@@ -23,29 +23,9 @@
 import argparse
 import boto3
 import json
-import os
 import re
-from aws_utils import (obfuscate, validate_aws_credentials)
+from aws_utils import (obfuscate, should_obfuscate, validate_aws_credentials)
 
-
-def should_obfuscate_secret(key: str) -> bool:
-    """
-    Returns True if the given key looks like it represents a secret value.
-    N.B.: Dumb implementation. Just sees if it contains "secret" or "password"
-    or "crypt" some obvious variants (case-insensitive), i.e. whatever is
-    in the SECRET_KEY_NAMES_FOR_OBFUSCATION list, which can be a regular
-    expression. Add more to SECRET_KEY_NAMES_FOR_OBFUSCATION if/when needed.
-    """
-    # Adjust/amend this as necessary.
-    SECRET_KEY_NAMES_FOR_OBFUSCATION = [
-        ".*secret.*",
-        ".*secrt.*",
-        ".*password.*",
-        ".*passwd.*",
-        ".*crypt.*"
-    ]
-    secret_key_names_regex = map(lambda regex: re.compile(regex, re.IGNORECASE), SECRET_KEY_NAMES_FOR_OBFUSCATION)
-    return any(regex.match(key) for regex in secret_key_names_regex)
 
 
 def print_aws_secrets(secret_name_pattern: str = None,
@@ -98,7 +78,7 @@ def print_aws_secrets(secret_name_pattern: str = None,
                 if not re.search(secret_key_name_pattern, secret_key_name, re.IGNORECASE):
                     continue
                 secret_value = secret_values_json[secret_key_name]
-                if should_obfuscate_secret(secret_key_name) and not show:
+                if should_obfuscate(secret_key_name) and not show:
                     secret_value = obfuscate(secret_value)
                 print(f"- {secret_key_name}: {secret_value}")
 
@@ -115,13 +95,12 @@ def main():
 
     print("AWS Secrets Utility", end = "")
     if args.name and args.name != ".*":
-        print(" | name containing: " + args.name, end = "")
+        print(" | names containing: " + args.name, end = "")
     if args.secrets and args.secrets != ".*":
         print(" | secret keys containing: " + args.secrets, end = "")
     print("")
 
-    access_key, secret_key, region = validate_aws_credentials(args.access_key, args.secret_key, args.region)
-    print("AWS Credentials: %s | %s | %s" % (access_key, obfuscate(secret_key), region))
+    access_key, secret_key, region = validate_aws_credentials(args.access_key, args.secret_key, args.region, True)
 
     print_aws_secrets(secret_name_pattern=args.name,
                       secret_key_name_pattern=args.secrets,

@@ -7,7 +7,6 @@
 import argparse
 import boto3
 import json
-import os
 import sys
 import yaml
 from collections import OrderedDict
@@ -44,8 +43,9 @@ def main():
     args_parser.add_argument("--region", type=str, required=False)
     args = args_parser.parse_args()
 
-    access_key, secret_key, region = validate_aws_credentials(args.access_key, args.secret_key, args.region)
-    print("AWS Credentials: %s | %s | %s" % (access_key, obfuscate(secret_key), region))
+    print(f"AWS Stack Template Utility | {args.name}")
+
+    access_key, secret_key, region = validate_aws_credentials(args.access_key, args.secret_key, args.region, True)
 
     print_aws_stack_template(args.name, access_key, secret_key, region)
 
