@@ -24,7 +24,7 @@ import argparse
 import boto3
 import json
 import re
-from aws_utils import (obfuscate, should_obfuscate, validate_aws_credentials)
+from aws_utils import (obfuscate, should_obfuscate, validate_aws)
 
 
 def print_aws_secrets(secret_name_pattern: str = None,
@@ -102,7 +102,7 @@ def main():
         print(" | secret keys containing: " + args.secrets, end = "")
     print("")
 
-    access_key, secret_key, region = validate_aws_credentials(args.access_key, args.secret_key, args.region, True)
+    access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region, True)
 
     print_aws_secrets(secret_name_pattern=args.name,
                       secret_key_name_pattern=args.secrets,

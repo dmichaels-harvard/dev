@@ -33,7 +33,7 @@
 import argparse
 import boto3
 import re
-from aws_utils import (obfuscate, validate_aws_credentials)
+from aws_utils import (obfuscate, validate_aws)
 
 
 def print_aws_stacks(name: str,
@@ -129,7 +129,7 @@ def main():
         print(" | parameter names containing: " + args.parameters, end = "")
     print()
 
-    access_key, secret_key, region = validate_aws_credentials(args.access_key, args.secret_key, args.region, True)
+    access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region, True)
 
     print_aws_stacks(name=args.name,
                      outputs=args.outputs, resources=args.resources, parameters=args.parameters,

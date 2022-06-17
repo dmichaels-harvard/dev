@@ -10,7 +10,7 @@ import json
 import sys
 import yaml
 from collections import OrderedDict
-from aws_utils import (obfuscate, validate_aws_credentials)
+from aws_utils import (obfuscate, validate_aws)
 
 
 def print_aws_stack_template(stack_name: str, access_key: str = None, secret_key: str = None, region: str = None):
@@ -44,7 +44,7 @@ def main():
 
     print(f"AWS Stack Template Utility | {args.name}")
 
-    access_key, secret_key, region = validate_aws_credentials(args.access_key, args.secret_key, args.region, True)
+    access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region, True)
 
     print_aws_stack_template(args.name, access_key, secret_key, region)
 

@@ -8,7 +8,7 @@
 import argparse
 import boto3
 import json
-from aws_utils import (validate_aws_credentials)
+from aws_utils import (validate_aws)
 
 
 def update_secret_value(secrets_manager, secret_name: str, secret_key_name: str, secret_key_value: str) -> bool:
@@ -90,7 +90,7 @@ def main():
     else:
         print(f"AWS Secrets Update Utility | {args.name}.{args.key}")
 
-    access_key, secret_key, region = validate_aws_credentials(args.access_key, args.secret_key, args.region, True)
+    access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region, True)
     secrets_manager = boto3.client('secretsmanager', aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region)
 
     update_secret_value(secrets_manager, args.name, args.key, args.value)

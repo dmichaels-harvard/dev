@@ -32,7 +32,7 @@ def should_obfuscate(key: str) -> bool:
     return any(regex.match(key) for regex in secret_key_names_regex)
 
 
-def validate_aws_credentials(access_key: str = None, secret_key: str = None, region: str = None, display: bool = False) -> [str, str, str]:
+def validate_aws(access_key: str = None, secret_key: str = None, region: str = None, display: bool = False) -> [str, str, str]:
     try:
         session = None
         if not access_key or not secret_key:
@@ -44,8 +44,10 @@ def validate_aws_credentials(access_key: str = None, secret_key: str = None, reg
             if not session:
                 session = boto3.Session()
             region = session.region_name if not region else region
+        sts = boto3.client("sts", aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region)
+        account_number = sts.get_caller_identity()["Account"]
         if display:
-            print("AWS Credentials: %s | %s | %s" % (access_key, obfuscate(secret_key), region))
+            print("AWS Account/Credentials: %s | %s | %s" % (account_number, access_key, region))
         return access_key, secret_key, region
     except Exception as e:
         print("Cannot determine AWS credentials!")
