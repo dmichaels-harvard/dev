@@ -1,8 +1,6 @@
 # --------------------------------------------------------------------------------------------------
 # Simple script to view AWS stacks and related info.
 # By default prints all stacks, and optionally all associated Outputs key/values.
-# TODO: Use regex for pattern rather than just simple contains.
-# TODO: Move the args stuff inside main.
 #
 # usage: aws-stacks [--name stack-name-pattern]
 #                   {

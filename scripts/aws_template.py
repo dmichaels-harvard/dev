@@ -13,7 +13,6 @@ from collections import OrderedDict
 from aws_utils import (obfuscate, validate_aws_credentials)
 
 
-
 def print_aws_stack_template(stack_name: str, access_key: str = None, secret_key: str = None, region: str = None):
 
     c4 = boto3.client('cloudformation', aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region)

@@ -27,7 +27,6 @@ import re
 from aws_utils import (obfuscate, should_obfuscate, validate_aws_credentials)
 
 
-
 def print_aws_secrets(secret_name_pattern: str = None,
                       secret_key_name_pattern: str = None,
                       access_key: str = None, secret_key: str = None, region: str = None,
@@ -73,14 +72,17 @@ def print_aws_secrets(secret_name_pattern: str = None,
             secret_values_json = json.loads(secret_values["SecretString"])
             for secret_key_name in sorted(secret_values_json.keys(), key=lambda key: key.lower()):
                 #
-                # This secret_key_name is an individaul secret key name (for the given secret name).
+                # This secret_key_name is an individual secret key name (for the given secret_name).
                 #
                 if not re.search(secret_key_name_pattern, secret_key_name, re.IGNORECASE):
                     continue
                 secret_value = secret_values_json[secret_key_name]
                 if should_obfuscate(secret_key_name) and not show:
                     secret_value = obfuscate(secret_value)
-                print(f"- {secret_key_name}: {secret_value}")
+                if secret_value is None:
+                    print(f"- {secret_key_name}: <no-value-exists>")
+                else:
+                    print(f"- {secret_key_name}: {secret_value}")
 
 
 def main():
