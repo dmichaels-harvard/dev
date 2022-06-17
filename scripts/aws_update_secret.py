@@ -11,7 +11,10 @@ import json
 from aws_utils import (validate_aws)
 
 
-def update_secret_value(secrets_manager, secret_name: str, secret_key_name: str, secret_key_value: str) -> bool:
+def update_secret_value(secret_name: str,
+                        secret_key_name: str,
+                        secret_key_value: str,
+                        access_key: str = None, secret_key: str = None, region: str = None) -> bool:
     """
     Updates the AWS secret value for the given secret key name within the given secret name.
     If the given secret key value does not yet exist it will be created.
@@ -23,6 +26,7 @@ def update_secret_value(secrets_manager, secret_name: str, secret_key_name: str,
     :param prompt: Prompt for confirmation (from stdin) if True otherwise silent.
     :return: True if succeeded otherwise false.
     """
+    secrets_manager = boto3.client('secretsmanager', aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region)
     try:
         # To update an individual secret key value we need to get the entire JSON
         # associated with the given secret name, update the specific element for
@@ -90,10 +94,9 @@ def main():
     else:
         print(f"AWS Secrets Update Utility | {args.name}.{args.key}")
 
-    access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region, True)
-    secrets_manager = boto3.client('secretsmanager', aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region)
+    access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region)
 
-    update_secret_value(secrets_manager, args.name, args.key, args.value)
+    update_secret_value(args.name, args.key, args.value, access_key, secret_key, region)
 
 if __name__ == "__main__":
     main()

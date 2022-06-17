@@ -129,7 +129,7 @@ def main():
         print(" | parameter names containing: " + args.parameters, end = "")
     print()
 
-    access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region, True)
+    access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region)
 
     print_aws_stacks(name=args.name,
                      outputs=args.outputs, resources=args.resources, parameters=args.parameters,

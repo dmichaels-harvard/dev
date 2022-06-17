@@ -58,8 +58,8 @@ def print_aws_secrets(secret_name_pattern: str = None,
     if secret_key_name_pattern and secret_key_name_pattern.startswith("*"):
         secret_key_name_pattern = ".*" + secret_key_name_pattern[1:]
 
-    c4 = boto3.client('secretsmanager', aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region)
-    for secret in sorted(c4.list_secrets()["SecretList"], key=lambda key: key["Name"].lower()):
+    secrets_manager = boto3.client('secretsmanager', aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region)
+    for secret in sorted(secrets_manager.list_secrets()["SecretList"], key=lambda key: key["Name"].lower()):
         #
         # This secret_name is the secret *name* (in contrast to a secret *key* name).
         #
@@ -68,7 +68,7 @@ def print_aws_secrets(secret_name_pattern: str = None,
             continue
         print(secret_name)
         if secret_key_name_pattern:
-            secret_values = c4.get_secret_value(SecretId=secret_name)
+            secret_values = secrets_manager.get_secret_value(SecretId=secret_name)
             secret_values_json = json.loads(secret_values["SecretString"])
             for secret_key_name in sorted(secret_values_json.keys(), key=lambda key: key.lower()):
                 #
@@ -102,7 +102,7 @@ def main():
         print(" | secret keys containing: " + args.secrets, end = "")
     print("")
 
-    access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region, True)
+    access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region)
 
     print_aws_secrets(secret_name_pattern=args.name,
                       secret_key_name_pattern=args.secrets,

@@ -44,7 +44,7 @@ def main():
 
     print(f"AWS Stack Template Utility | {args.name}")
 
-    access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region, True)
+    access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region)
 
     print_aws_stack_template(args.name, access_key, secret_key, region)
 

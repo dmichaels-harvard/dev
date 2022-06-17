@@ -32,7 +32,7 @@ def should_obfuscate(key: str) -> bool:
     return any(regex.match(key) for regex in secret_key_names_regex)
 
 
-def validate_aws(access_key: str = None, secret_key: str = None, region: str = None, display: bool = False) -> [str, str, str]:
+def validate_aws(access_key: str = None, secret_key: str = None, region: str = None, display: bool = True) -> [str, str, str]:
     try:
         session = None
         if not access_key or not secret_key:
