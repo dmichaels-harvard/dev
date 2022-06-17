@@ -34,64 +34,21 @@
 
 import argparse
 import boto3
+import os
 import re
+from aws_utils import (obfuscate, validate_aws_credentials)
 
 
-def print_aws_stacks(name: str, outputs: str, resources: str, parameters: str, verbose: bool):
+def print_aws_stacks(name: str,
+                     outputs: str, resources: str, parameters: str,
+                     access_key: str = None, secret_key: str = None, region: str = None,
+                     verbose: bool = False):
 
-    c4 = boto3.client('cloudformation')
-    stacks = c4.describe_stacks()["Stacks"]
-    for stack in stacks:
-        stack_name = stack["StackName"]
-        if name and not name.lower() in stack_name.lower():
-            continue
-        stack_updated = stack.get("LastUpdatedTime")
-        if stack_updated:
-            print("%-15s (updated: %s)" % (stack_name, stack_updated.astimezone().strftime("%Y-%m-%d %H:%M:%S")))
-        else:
-            stack_created = stack.get("CreationTime")
-            if stack_created:
-                print("%-15s (created: %s)" % (stack_name, stack_created.astimezone().strftime("%Y-%m-%d %H:%M:%S")))
-            else:
-                print("%-15s" % (stack_name))
-        if outputs:
-            stack_outputs = stack.get("Outputs")
-            if stack_outputs:
-                for stack_output in sorted(stack_outputs, key=lambda key: key["OutputKey"]):
-                    stack_output_key = stack_output["OutputKey"]
-                    if outputs and not re.search(outputs, stack_output_key, re.IGNORECASE):
-                        continue
-                    stack_output_value = stack_output["OutputValue"]
-                    stack_output_export_name = stack_output.get("ExportName")
-                    print(" - %s: %s" % (stack_output_key, stack_output_value))
-                    if verbose and stack_output_export_name:
-                        print("   %s (export name)" % (stack_output_export_name))
-        elif resources:
-            for stack_resource in sorted(c4.describe_stack_resources(StackName=stack_name)["StackResources"], key=lambda key: key["LogicalResourceId"].lower()):
-                stack_resource_name = stack_resource["LogicalResourceId"]
-                stack_resource_type = stack_resource["ResourceType"]
-                if resources and not re.search(resources, stack_resource_name, re.IGNORECASE):
-                    continue
-                print("- %s: %s" % (stack_resource_name, stack_resource_type))
-        elif parameters:
-            stack_parameters = stack.get("Parameters")
-            if stack_parameters:
-                for stack_parameter in sorted(stack_parameters, key=lambda key: key["ParameterKey"]):
-                    stack_parameter_key = stack_parameter["ParameterKey"]
-                    if parameters and not re.search(parameters, stack_parameter_key, re.IGNORECASE):
-                        continue
-                    stack_parameter_value = stack_parameter["ParameterValue"]
-                    print(" - %s: %s" % (stack_parameter_key, stack_parameter_value))
-
-
-# https://www.learnaws.org/2021/02/24/boto3-resource-client/#:~:text=Clients%20vs%20Resources,when%20interacting%20with%20AWS%20services.
-# Resources are higher-level abstractions of AWS services compared to clients.
-# Resources are the recommended pattern to use boto3 as you don’t have to worry
-# about a lot of the underlying details when interacting with AWS services.
-
-def print_aws_stacks_using_resource(name: str, outputs: str, resources: str, parameters: str, verbose: bool):
-
-    c4 = boto3.resource('cloudformation')
+    # https://www.learnaws.org/2021/02/24/boto3-resource-client/#:~:text=Clients%20vs%20Resources,when%20interacting%20with%20AWS%20services.
+    # Resources are higher-level abstractions of AWS services compared to clients.
+    # Resources are the recommended pattern to use boto3 as you don’t have to worry
+    # about a lot of the underlying details when interacting with AWS services.
+    c4 = boto3.resource('cloudformation', aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region)
     stacks = c4.stacks.all()
     for stack in stacks:
         stack_name = stack.name
@@ -143,37 +100,45 @@ def main():
     args_parser.add_argument('--outputs', type=str, const='.*', nargs='?')
     args_parser.add_argument('--resources', type=str, const='.*', nargs='?')
     args_parser.add_argument('--parameters', type=str, const='.*', nargs='?')
+    args_parser.add_argument("--access-key", type=str, required=False)
+    args_parser.add_argument("--secret-key", type=str, required=False)
+    args_parser.add_argument("--region", type=str, required=False)
     args_parser.add_argument("--verbose", action="store_true", required=False)
     args = args_parser.parse_args()
 
     description = ""
     mutually_exclusive_options_count = 0
     if args.outputs:
-        description = " with Outputs"
+        description = " Outputs"
         mutually_exclusive_options_count += 1
     if args.resources:
-        description = " with Resources"
+        description = " Resources"
         mutually_exclusive_options_count += 1
     if args.parameters:
-        description = " with Parameters"
+        description = " Parameters"
         mutually_exclusive_options_count += 1
     if mutually_exclusive_options_count > 1:
         print("Must specify only one of: --outputs, --resources, --parameters")
         exit(1)
 
-    print(f"AWS Stacks{description}", end = "")
+    print(f"AWS Stacks{description} Utility", end = "")
     if args.name:
-        print(" / names containing: " + args.name, end = "")
+        print(" | names containing: " + args.name, end = "")
     if args.outputs and args.outputs != ".*":
-        print(" / output keys containing: " + args.outputs, end = "")
+        print(" | output keys containing: " + args.outputs, end = "")
     if args.resources and args.resources != ".*":
-        print(" / resource names containing: " + args.resources, end = "")
+        print(" | resource names containing: " + args.resources, end = "")
     if args.parameters and args.parameters != ".*":
-        print(" / parameter names containing: " + args.parameters, end = "")
+        print(" | parameter names containing: " + args.parameters, end = "")
     print()
 
-    print_aws_stacks_using_resource(args.name, args.outputs, args.resources, args.parameters, args.verbose)
-#   print_aws_stacks(args.name, args.outputs, args.resources, args.parameters, args.verbose)
+    access_key, secret_key, region = validate_aws_credentials(args.access_key, args.secret_key, args.region)
+    print("AWS Credentials: %s | %s | %s" % (access_key, obfuscate(secret_key), region))
+
+    print_aws_stacks(name=args.name,
+                     outputs=args.outputs, resources=args.resources, parameters=args.parameters,
+                     access_key=access_key, secret_key=secret_key, region=region,
+                     verbose=args.verbose)
 
 
 if __name__ == "__main__":

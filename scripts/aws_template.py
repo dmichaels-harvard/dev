@@ -7,13 +7,17 @@
 import argparse
 import boto3
 import json
+import os
 import sys
 import yaml
 from collections import OrderedDict
+from aws_utils import (obfuscate, validate_aws_credentials)
 
-def print_aws_stack_template(stack_name):
 
-    c4 = boto3.client('cloudformation')
+
+def print_aws_stack_template(stack_name: str, access_key: str = None, secret_key: str = None, region: str = None):
+
+    c4 = boto3.client('cloudformation', aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region)
     stack_template = c4.get_template(StackName=stack_name)
     stack_template_body = stack_template["TemplateBody"]
     if isinstance(stack_template_body, OrderedDict):
@@ -31,9 +35,18 @@ def print_aws_stack_template(stack_name):
         #
         print(stack_template_body)
 
+
 def main():
-    stack_name = sys.argv[1]
-    print_aws_stack_template(stack_name)
+    args_parser = argparse.ArgumentParser()
+    args_parser.add_argument("--name", type=str, required=True)
+    args_parser.add_argument("--access-key", type=str, required=False)
+    args_parser.add_argument("--secret-key", type=str, required=False)
+    args_parser.add_argument("--region", type=str, required=False)
+    args = args_parser.parse_args()
+    access_key, secret_key, region = validate_aws_credentials(args.access_key, args.secret_key, args.region)
+    print("AWS Credentials: %s | %s | %s" % (access_key, obfuscate(secret_key), region))
+    print_aws_stack_template(args.name, access_key, secret_key, region)
+
 
 if __name__ == "__main__":
     main()
