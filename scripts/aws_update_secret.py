@@ -51,6 +51,9 @@ def update_secret_value(secrets_manager, secret_name: str, secret_key_name: str,
                 print(f"Current value of AWS secret {secret_name}.{secret_key_name} is: {secret_key_value_current}")
                 action = "update"
             print(f"New value of AWS secret {secret_name}.{secret_key_name} is: {secret_key_value}")
+            if secret_key_value_current == secret_key_value:
+                print("Values are not different. Nothing to update.")
+                return False
 
         yes_or_no = input(f"Are you sure you want to {action} AWS secret {secret_name}.{secret_key_name}? [yes/no] ").strip().lower()
         if yes_or_no == "yes":
