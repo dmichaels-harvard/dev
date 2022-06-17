@@ -6,7 +6,7 @@
 # option to see the actualy secret keys/values for each secret name.
 # Values are obfuscated if they look like they represent true secrets.
 #
-# usage: aws-secrets [--names secret-name-pattern] [--secrets [secret-key-pattern]] [--show]
+# usage: aws-secrets [--name secret-name-pattern] [--secrets [secret-key-pattern]] [--show]
 #
 # If --name with a simple pattern is given then limit secrets to those
 # whose name contains the specified simple pattern (case-insensitive).
