@@ -33,23 +33,25 @@ def update_secret_value(secrets_manager, secret_name: str, secret_key_name: str,
         except:
             print(f"AWS secret name does not exist: {secret_name}")
             return False
+
         secret_value_json = json.loads(secret_value["SecretString"])
-        secret_key_current_value = secret_value_json.get(secret_key_name)
+        secret_key_value_current = secret_value_json.get(secret_key_name)
+
         action = None
-        if secret_key_current_value is None:
-            if secret_key_value is None:
+        if secret_key_value is None:
+            if secret_key_value_current is None:
                 print(f"AWS secret {secret_name}.{secret_key_name} does not exist. Nothing to delete.")
                 return False
-            else:
-                print(f"AWS secret {secret_name}.{secret_key_name} does not yet exist.")
-                action = "create"
-        else:
-            print(f"Current value of AWS secret {secret_name}.{secret_key_name} is: {secret_key_current_value}")
-            action = "update"
-        if secret_key_value is None:
             action = "delete"
         else:
+            if secret_key_value_current is None:
+                print(f"AWS secret {secret_name}.{secret_key_name} does not yet exist.")
+                action = "create"
+            else:
+                print(f"Current value of AWS secret {secret_name}.{secret_key_name} is: {secret_key_value_current}")
+                action = "update"
             print(f"New value of AWS secret {secret_name}.{secret_key_name} is: {secret_key_value}")
+
         yes_or_no = input(f"Are you sure you want to {action} AWS secret {secret_name}.{secret_key_name}? [yes/no] ").strip().lower()
         if yes_or_no == "yes":
             if secret_key_value is None:
@@ -58,6 +60,7 @@ def update_secret_value(secrets_manager, secret_name: str, secret_key_name: str,
                 secret_value_json[secret_key_name] = secret_key_value
             secrets_manager.update_secret(SecretId=secret_name, SecretString=json.dumps(secret_value_json))
             return True
+
     except Exception as e:
         print(f"EXCEPTION: {str(e)}")
     return False
