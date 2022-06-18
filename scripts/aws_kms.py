@@ -9,7 +9,7 @@ def get_kms_keys(customer: bool, access_key: str = None, secret_key: str = None,
     for key in kms.list_keys()["Keys"]:
         key_id = key["KeyId"]
         key_description = kms.describe_key(KeyId=key_id)
-        print(key_description)
+        # print(key_description)
         key_metadata = key_description["KeyMetadata"]
         key_manager = key_metadata["KeyManager"]
         if not customer or key_manager == "CUSTOMER":
@@ -26,6 +26,7 @@ def main():
     args = args_parser.parse_args()
 
     print(f"AWS KMS Utility{' | customer-managed' if args.customer else ''}")
+
 
     access_key, secret_key, region = validate_aws(args.access_key, args.secret_key, args.region)
 

@@ -7,7 +7,7 @@
 import argparse
 import boto3
 import re
-from aws_utils import (obfuscate, validate_aws)
+from aws_utils import (validate_aws)
 
 
 def create_aws_user_access_key(name: str,
@@ -47,6 +47,10 @@ def main():
 
     create_aws_user_access_key(args.name, access_key, secret_key, region)
 
+    # TODO: For our anticipated use case (setting up remaining secrets for 4dn-cloud-infra deploy),
+    # we will use the IAM user with a name containing "ApplicationS3Federator" which we will
+    # get logical_id from: 4dn-cloud-infra/src/parts/iam.py/ecs_s3_iam_user()
+    # so we will want to factor that out into a common/shared file.
 
 if __name__ == "__main__":
     main()

@@ -18,7 +18,7 @@ def print_aws_users(name: str,
     users = iam.users.all()
     for user in sorted(users, key=lambda user: user.name):
         user_name = user.name
-        if name and not re.search(name, user_name):
+        if name and not re.search(name, user_name, re.IGNORECASE):
             continue
         if verbose:
             print(f"- {user_name} ({user.arn})")
