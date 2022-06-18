@@ -8,7 +8,7 @@
 import argparse
 import boto3
 import json
-from aws_utils import (validate_aws)
+from aws_utils import (obfuscate, should_obfuscate, validate_aws)
 
 
 def update_secret_value(secret_name: str,
@@ -52,7 +52,15 @@ def update_secret_value(secret_name: str,
                 print(f"AWS secret {secret_name}.{secret_key_name} does not yet exist.")
                 action = "create"
             else:
-                print(f"Current value of AWS secret {secret_name}.{secret_key_name} is: {secret_key_value_current}")
+                if should_obfuscate(secret_key_name):
+                    print(f"Current value of AWS secret looks like it is sensitive: {secret_name}.{secret_key_name}")
+                    yes_or_no = input("Show in plaintext? [yes/no] ").strip().lower()
+                    if yes_or_no:
+                        print(f"Current value of AWS secret {secret_name}.{secret_key_name} is: {secret_key_value_current}")
+                    else:
+                        print(f"Current value of AWS secret {secret_name}.{secret_key_name} is: {obfuscate(secret_key_value_current)}")
+                else:
+                    print(f"Current value of AWS secret {secret_name}.{secret_key_name} is: {secret_key_value_current}")
                 action = "update"
             print(f"New value of AWS secret {secret_name}.{secret_key_name} is: {secret_key_value}")
             if secret_key_value_current == secret_key_value:
