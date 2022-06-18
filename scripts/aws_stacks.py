@@ -1,4 +1,4 @@
-# --------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 # Simple script to view AWS stacks and related info.
 # By default prints all stacks, and optionally all associated Outputs key/values.
 #
@@ -28,7 +28,7 @@
 # N.B. Only one of --output(s) or --resource(s) or --parameter(s) may be specified.
 #
 # If --verbose is given then include export name with the outputs keys/values.
-# --------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 import argparse
 import boto3

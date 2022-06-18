@@ -1,4 +1,4 @@
-# --------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 # Simple script to view AWS secrets info.
 #
 # By default prints just (all) the names of the secrets available,
@@ -18,7 +18,7 @@
 # N.B. Secret values with names that look senstive ("secret" or "password" etc) are obfuscated.
 #
 # If --show is given the prints obfuscated values in plaintext.
-# --------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 import argparse
 import boto3
