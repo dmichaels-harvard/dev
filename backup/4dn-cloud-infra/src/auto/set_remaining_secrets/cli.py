@@ -23,24 +23,19 @@ from .utils import (obfuscate, should_obfuscate)
 
 
 def get_custom_dir(custom_dir: str = None):
-    if not custom_dir:
-        custom_dir = InfraDirectories.CUSTOM_DIR
     return InfraDirectories.get_custom_dir(custom_dir)
 
 
 def get_custom_aws_creds_dir(custom_dir: str = None):
-    custom_dir = get_custom_dir(custom_dir)
     return InfraDirectories.get_custom_aws_creds_dir(custom_dir)
 
 
 def get_custom_config_file(custom_dir: str = None):
-    custom_dir = get_custom_dir(custom_dir)
     return InfraFiles.get_config_file(custom_dir)
 
 
 def get_custom_config_file_value(name: str):
     custom_config_file = get_custom_config_file()
-    custom_config_json = None
     with io.open(custom_config_file, "r") as custom_config_fp:
         custom_config_json = json.load(custom_config_fp)
         return custom_config_json.get(name)
@@ -79,6 +74,7 @@ def main():
     args_parser.add_argument("--secret-key", type=str, required=False)
     args_parser.add_argument("--region", type=str, required=False)
     args_parser.add_argument("--identity", type=str, required=False)
+    args_parser.add_argument("--federated-user", type=str, required=False)
     args_parser.add_argument("--show", action="store_true", required=False)
     args = args_parser.parse_args()
 
@@ -110,17 +106,17 @@ def main():
     print(f"Your AWS account number: {account_number}")
 
     # Get the AWS credentials context.
-    with aws.establish_credentials():
-        print(f"Your AWS access key: {aws.access_key_id}")
-        print(f"Your AWS access secret: {aws.secret_access_key if args.show else obfuscate(aws.secret_access_key)}")
-        print(f"Your AWS default region: {aws.default_region}")
-        print(f"Your AWS account number: {aws.account_number}")
-        if account_number != aws.account_number:
-            print(f"WARNING: Account number from your config file ({account_number}) does not match AWS ({aws.account_number}).")
-        secrets_to_update["ACCOUNT_NUMBER"] = aws.account_number
+    with aws.establish_credentials() as credentials:
+        print(f"Your AWS access key: {credentials.access_key_id}")
+        print(f"Your AWS access secret: {credentials.secret_access_key if args.show else obfuscate(credentials.secret_access_key)}")
+        print(f"Your AWS default region: {credentials.default_region}")
+        print(f"Your AWS account number: {credentials.account_number}")
+        if account_number != credentials.account_number:
+            print(f"WARNING: Account number from your config file ({account_number}) does not match AWS ({credentials.account_number}).")
+        secrets_to_update["ACCOUNT_NUMBER"] = credentials.account_number
 
     # Get the IAM "federator" user name.
-    iam_federator_user_name = aws.get_federated_user_name()
+    iam_federator_user_name = args.federated_user if args.federated_user else aws.get_federated_user_name()
     print(f"Federated AWS user: {iam_federator_user_name}")
 
     # Get the ElasticSearch server/host name.

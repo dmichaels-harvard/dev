@@ -1,22 +1,28 @@
 import boto3
+from collections import namedtuple
 import contextlib
 import os
 
 class AwsContext:
     """
     Class to setup the context for AWS credentials which do NOT rely on environment at all.
-    I.e. neither on the AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY environment variables, nor
-    on the ~/.aws/credentials file (or the AWS_SHARED_CREDENTIALS_FILE environment variable).
+    I.e. neither on the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables,
+    nor on the ~/.aws credentials and config files (nor on the AWS_SHARED_CREDENTIALS_FILE
+    and AWS_CONFIG_FILE environment variables).
 
-    A specific path to the ~/.aws credentials directory must be specified, which will setup
-    the context to refer to the 'credentials' and 'config' file(s) there; or, specific
-    AWS access key ID and associated secret access key values need to be specified; the
-    latter taking precedence over the former. Usage looks like this:
+    A specific path to the ~/.aws credentials directory must be specified, which will
+    setup the context to refer to the credentials and config file(s) there; or, specific
+    AWS access key ID and associated secret access key (and default region) values need
+    to be specified; the latter taking precedence over the former. Usage like this:
 
         aws = AwsContext(your_custom_aws_directory)
-        with aws.establish_credentials():
+        with aws.establish_credentials() as credentials:
             do_something_with_boto3()
-            reference_context_values(aws.access_key_id, aws.secret_access_key, aws.account_number, aws.default_region)
+            # if desired reference credentials values ...
+            access_key_id = credentials.access_key_id
+            secret_access_key = credentials.secret_access_key
+            default_region = credentials.default_region
+            account_number = credentials.account_number
     """
 
     def __init__(self, custom_aws_creds_dir: str, access_key: str = None, secret_key: str = None, region: str = None):
@@ -36,6 +42,12 @@ class AwsContext:
 
     @contextlib.contextmanager
     def establish_credentials(self):
+        """
+        Context manager to establish AWS credentials without using environment,
+        rather using the explicit AWS credentials directory or the explicit
+        credentials values passed to the constructor of this object.
+        :return: Yields named tuple containing: access_key_id, secret_access_key, default_region, account_number.
+        """
 
         def save_and_unset_environment_variables(environment_variables: list) -> list:
             saved_environment_variables = {}
@@ -76,11 +88,15 @@ class AwsContext:
                     os.environ["AWS_CONFIG_FILE"] = custom_aws_creds_config_file
             session = boto3.session.Session()
             credentials = session.get_credentials()
-            self.access_key_id = credentials.access_key
-            self.secret_access_key = credentials.secret_key
-            self.default_region = session.region_name
-            self.account_number = boto3.client("sts").get_caller_identity()["Account"]
-            yield
+            access_key_id = credentials.access_key
+            secret_access_key = credentials.secret_key
+            default_region = session.region_name
+            account_number = boto3.client("sts").get_caller_identity()["Account"]
+            yield namedtuple("aws", "access_key_id secret_access_key default_region account_number") \
+                            (access_key_id=access_key_id,
+                             secret_access_key=secret_access_key,
+                             default_region=default_region,
+                             account_number=account_number)
         except Exception as e:
             print(f"EXCEPTION! {str(e)}")
         finally:
