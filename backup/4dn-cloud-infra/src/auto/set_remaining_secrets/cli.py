@@ -98,7 +98,12 @@ def main():
 
     print(f"Your custom directory: {custom_dir}")
     print(f"Your custom config file: {custom_config_file}")
-    print(f"Your AWS credentials directory: {custom_aws_creds_dir}")
+    custom_aws_creds_dir_symlink_target = os.readlink(custom_aws_creds_dir) if os.path.islink(custom_aws_creds_dir) else None
+    if custom_aws_creds_dir_symlink_target:
+        print(f"Your AWS credentials directory: {custom_aws_creds_dir}@ ->")
+        print(f"                                {custom_aws_creds_dir_symlink_target}")
+    else:
+        print(f"Your AWS credentials directory: {custom_aws_creds_dir}")
     print(f"Your AWS credentials name: {aws_credentials_name}")
 
     # Get the AWS ACCOUNT_NUMBER value from the custom/config.json file.

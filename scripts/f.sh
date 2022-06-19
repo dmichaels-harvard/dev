@@ -7,6 +7,7 @@
 #             [--text]
 #             [--list]
 #             [--num]
+#             [--symlinks]
 #             [--dryrun]
 #             [--quiet]
 #             [--exclude directory_names_to_exclude...]
@@ -14,6 +15,7 @@
 # The --text option turns on the grep -I option which skips binary files.
 # The --list option turns on the grep -l option which only lists file names/paths matched.
 # The --num option turns on the grep -n option which includes line numbers.
+# The --symlinks option makes find follow symlinks.
 # The --exclude option can be used to list one or more directory names to skip in the search.
 # The --dryrun option can be used to just to see the find command that would be run.
 # --------------------------------------------------------------------------------------------------
@@ -39,6 +41,7 @@ EXCLUDE_OPTION=
 EXCLUDE_DIRS=
 LIST_FILES_ONLY=
 LINE_NUMBERS=
+FIND_FOLLOW_SYMLINKS=
 DRYRUN=
 QUIET=
 DEBUG=
@@ -72,8 +75,11 @@ while [ $# -gt 0 ]; do
     elif [ "$1" = "--list" -o "$1" = "-list" -o "$1" = "--l" -o "$1" = "-l" ]; then
         LIST_FILES_ONLY='-l'
         shift 1
-    elif [ "$1" = "--num" -o "$1" = "--um" -o "$1" = "--n" -o "$1" = "-n" ]; then
+    elif [ "$1" = "--num" -o "$1" = "-num" -o "$1" = "--n" -o "$1" = "-n" ]; then
         LINE_NUMBERS="-n"
+        shift 1
+    elif [ "$1" = "--symlinks" -o "$1" = "-symlinks" -o "$1" = "--s" -o "$1" = "-s" ]; then
+        FIND_FOLLOW_SYMLINKS="-L"
         shift 1
     elif [ "$1" = "--py" -o "$1" = "-py" ]; then
         #
@@ -131,7 +137,7 @@ if [ -z "$SEARCH_FOR"  ]; then
     usage
 fi
 
-COMMAND="find . -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP $LIST_FILES_ONLY $TEXT_FILES_ONLY $LINE_NUMBERS -H \"$SEARCH_FOR\" {} \;"
+COMMAND="find $FIND_FOLLOW_SYMLINKS . -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP $LIST_FILES_ONLY $TEXT_FILES_ONLY $LINE_NUMBERS -H \"$SEARCH_FOR\" {} \;"
 COMMAND=`echo $COMMAND | tr -s ' '`
 
 if [ ! -z $DEBUG ]; then
