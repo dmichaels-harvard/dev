@@ -65,7 +65,6 @@ class AwsFunctions(AwsContext):
                     return False
                 secret_value_json = json.loads(secret_value["SecretString"])
                 secret_key_value_current = secret_value_json.get(secret_key_name)
-                action = None
                 if secret_key_value is None:
                     if secret_key_value_current is None:
                         print(f"AWS secret {secret_name}.{secret_key_name} does not exist. Nothing to delete.")
