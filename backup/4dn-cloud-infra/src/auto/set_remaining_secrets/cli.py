@@ -101,11 +101,12 @@ def main():
     print(f"Your AWS credentials directory: {custom_aws_creds_dir}")
     print(f"Your AWS credentials name: {aws_credentials_name}")
 
-    # Get the AWS account number from the custom/config.json file.
+    # Get the AWS ACCOUNT_NUMBER value from the custom/config.json file.
     account_number = get_account_number_from_config_file()
     print(f"Your AWS account number: {account_number}")
 
-    # Get the AWS credentials context.
+    # Verify the AWS credentials context and get the associated ACCOUNT_NUMBER value.
+    # If ACCOUNT_NUMBER does not agree with what's in the config file (above) then warning (error?).
     with aws.establish_credentials() as credentials:
         print(f"Your AWS access key: {credentials.access_key_id}")
         print(f"Your AWS access secret: {credentials.secret_access_key if args.show else obfuscate(credentials.secret_access_key)}")
@@ -116,8 +117,8 @@ def main():
         secrets_to_update["ACCOUNT_NUMBER"] = credentials.account_number
 
     # Get the IAM "federator" user name.
-    iam_federator_user_name = args.federated_user if args.federated_user else aws.get_federated_user_name()
-    print(f"Federated AWS user: {iam_federator_user_name}")
+    federated_user_name = args.federated_user if args.federated_user else aws.get_federated_user_name()
+    print(f"Federated AWS user: {federated_user_name}")
 
     # Get the ElasticSearch server/host name.
     es_server = aws.get_opensearch_endpoint(aws_credentials_name)
@@ -155,7 +156,7 @@ def main():
         secrets_to_update["ENCODED_S3_ENCRYPT_KEY_ID"] = s3_encrypt_key_id
 
     # Create the security credentials access key/secret pait for the IAM "federator" user.
-    key_id, key_secret = aws.create_user_access_key(iam_federator_user_name)
+    key_id, key_secret = aws.create_user_access_key(federated_user_name)
     secrets_to_update["S3_AWS_ACCESS_KEY_ID"] = key_id
     secrets_to_update["S3_AWS_SECRET_ACCESS_KEY"] = key_secret
 

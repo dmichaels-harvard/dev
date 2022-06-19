@@ -208,9 +208,9 @@ class AwsFunctions(AwsContext):
                         existing_access_key_id = existing_key["AccessKeyId"]
                         existing_access_key_create_date = existing_key["CreateDate"]
                         print(f"- {existing_access_key_id} (created: {existing_access_key_create_date.astimezone().strftime('%Y-%m-%d %H:%M:%S')})")
-                        yes_or_no = input("Do you still want to create a new access key? [yes/no] ").strip().lower()
-                        if yes_or_no != "yes":
-                            return None, None
+                    yes_or_no = input("Do you still want to create a new access key? [yes/no] ").strip().lower()
+                    if yes_or_no != "yes":
+                        return None, None
             print(f"The created access key and secret will be displayed in plaintext.")
             yes_or_no = input("Do you want to continue? [yes/no] ").strip().lower()
             if yes_or_no == "yes":

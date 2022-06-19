@@ -26,19 +26,10 @@ class AwsContext:
     """
 
     def __init__(self, custom_aws_creds_dir: str, access_key: str = None, secret_key: str = None, region: str = None):
-        # This reset of the boto3.DEFAULT_SESSION is to workaround an odd problem with boto3
-        # caching a default session even bad or non-existent credentials. It was manifest due
-        # to importing (ultimately) modules from dcicutils (e.g. env_utils) which globally
-        # create a boto3 session when no credentials are in effect.
-        boto3.DEFAULT_SESSION = None
         self._custom_aws_creds_dir = custom_aws_creds_dir
         self._aws_access_key_id = access_key
         self._aws_secret_access_key = secret_key
         self._aws_default_region = region
-        self.access_key_id = None
-        self.secret_access_key = None
-        self.default_region = None
-        self.account_number = None
 
     @contextlib.contextmanager
     def establish_credentials(self):
@@ -69,7 +60,13 @@ class AwsContext:
                                                                              "AWS_SHARED_CREDENTIALS_FILE",
                                                                              "AWS_CONFIG_FILE",
                                                                              "AWS_DEFAULT_REGION" ])
+
+        # This reset of the boto3.DEFAULT_SESSION is to workaround an odd problem with boto3
+        # caching a default session even bad or non-existent credentials. It was manifest due
+        # to importing (ultimately) modules from dcicutils (e.g. env_utils) which ultimately
+        # globally create a boto3 session when no credentials are in effect.
         boto3.DEFAULT_SESSION = None
+
         try:
             if self._aws_access_key_id and self._aws_secret_access_key:
                 os.environ["AWS_ACCESS_KEY_ID"] = self._aws_access_key_id
@@ -101,7 +98,3 @@ class AwsContext:
             print(f"EXCEPTION! {str(e)}")
         finally:
             restore_environment_variables(saved_environment_variables)
-            self.access_key_id = None
-            self.secret_access_key = None
-            self.default_region = None
-            self.account_number = None
