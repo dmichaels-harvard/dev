@@ -15,7 +15,7 @@ class AwsContext:
         aws = AwsContext(your_custom_aws_directory)
         with aws.establish_credentials():
             do_something_with_boto3()
-            reference_context_variables(aws.access_key_id, aws.secret_access_key, aws.account_number, aws.default_region)
+            reference_context_values(aws.access_key_id, aws.secret_access_key, aws.account_number, aws.default_region)
     """
     def __init__(self, custom_aws_creds_dir: str, access_key: str = None, secret_key: str = None, region: str = None):
         # This reset of the boto3.DEFAULT_SESSION is to workaround an odd problem with boto3
@@ -37,6 +37,7 @@ class AwsContext:
         # Credentials for this process need to come from custom/aws_creds directory,
         # or be directly passed in. We don't want to come from environment.
         try:
+            boto3.DEFAULT_SESSION = None
             save_AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
             save_AWS_SECRET_ACCESS_KEY= os.environ.get("AWS_SECRET_ACCESS_KEY")
             save_AWS_SHARED_CREDENTIALS_FILE = os.environ.get("AWS_SHARED_CREDENTIALS_FILE")

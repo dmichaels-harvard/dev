@@ -7,6 +7,12 @@ from .utils import (obfuscate, should_obfuscate)
 class AwsFunctions(AwsContext):
 
     def find_secret_name(self, secret_name_pattern: str) -> str:
+        """
+        Returns the first secret name in the AWS secrets manager which
+        matches the given (regular expression) pattern.
+        :param secret_name_pattern: Regular expression for secret name.
+        :return: Matched secret name or None if none found.
+        """
         with super().establish_credentials():
             secrets_manager = boto3.client('secretsmanager')
             for secret in secrets_manager.list_secrets()["SecretList"]:
@@ -16,6 +22,13 @@ class AwsFunctions(AwsContext):
         return None
 
     def get_secret_value(self, secret_name: str, secret_key_name: str) -> str:
+        """
+        Returns the value of the given secret key name
+        within the given secret name in the AWS secrets manager.
+        :param secret_name: AWS secret name.
+        :param secret_key_name: AWS secret key name.
+        :return: Secret key value if found or None if not found.
+        """
         with super().establish_credentials():
             secrets_manager = boto3.client('secretsmanager')
             secret_values = secrets_manager.get_secret_value(SecretId=secret_name)

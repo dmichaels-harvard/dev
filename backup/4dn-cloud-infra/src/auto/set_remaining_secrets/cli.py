@@ -133,6 +133,7 @@ def main():
     secrets_to_update["ENCODED_ES_SERVER"] = es_server
 
     # Get the RDS hostname and password,
+    # TODO
     # This is from the secret keys named "host" and "password" in
     # within the secret name ending in "RDSSecret" in the secrets manager;
     # the "password" is from src/parts/datastore.py/C4Datastore.rds_secret;
