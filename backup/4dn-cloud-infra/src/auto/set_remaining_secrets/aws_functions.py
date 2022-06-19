@@ -180,6 +180,8 @@ class AwsFunctions(AwsContext):
         """
         Create an AWS security credentials access key pair for the given IAM user name.
         This is an command-line interactive process, prompting the user for info/confirmation.
+        And, the secret part of the access key pair will be printed in plaintext,
+        because this is the only time it will ever be available.
         :param user_name: AWS IAM user name.
         :return: Tuple containing the access key ID and associated secret.
         """
