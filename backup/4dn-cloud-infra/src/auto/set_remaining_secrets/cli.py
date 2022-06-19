@@ -125,7 +125,7 @@ def main():
     federated_user_name = args.federated_user if args.federated_user else aws.get_federated_user_name()
     print(f"AWS federated user is: {federated_user_name}")
 
-    # Get the ElasticSearch server/host name.
+    # Get the ElasticSearch host/port.
     es_server = aws.get_opensearch_endpoint(aws_credentials_name)
     print(f"AWS ElasticSearch server is: {es_server}")
     secrets_to_update["ENCODED_ES_SERVER"] = es_server
