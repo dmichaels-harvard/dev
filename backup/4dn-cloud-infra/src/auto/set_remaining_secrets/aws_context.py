@@ -3,6 +3,20 @@ import contextlib
 import os
 
 class AwsContext:
+    """
+    Class to setup the context for AWS credentials which do NOT rely on environment at all.
+    I.e. neither on the AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY environment variables, nor
+    on the ~/.aws/credentials file (or the AWS_SHARED_CREDENTIALS_FILE environment variable).
+    A specific path to the ~/.aws credentials directory must be specified, which will setup
+    the context to refer to the 'credentials' and/or 'config' file(s) there; or, specific
+    AWS access key ID and associated secret access key values need to be specified; the
+    latter taking precedence over the former. Usage looks like this:
+
+        aws = AwsContext(your_custom_aws_directory)
+        with aws.establish_credentials():
+            do_something_with_boto3()
+            reference_context_variables(aws.access_key_id, aws.secret_access_key, aws.account_number, aws.default_region)
+    """
     def __init__(self, custom_aws_creds_dir: str, access_key: str = None, secret_key: str = None, region: str = None):
         # This reset of the boto3.DEFAULT_SESSION is to workaround an odd problem with boto3
         # caching a default session even bad or non-existent credentials. It was manifest due
@@ -17,7 +31,6 @@ class AwsContext:
         self.secret_access_key = None
         self.default_region = None
         self.account_number = None
-        pass
 
     @contextlib.contextmanager
     def establish_credentials(self):

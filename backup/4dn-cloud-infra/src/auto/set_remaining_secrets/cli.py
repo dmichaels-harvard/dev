@@ -105,17 +105,18 @@ def main():
     print(f"Your AWS credentials directory: {custom_aws_creds_dir}")
     print(f"Your AWS credentials name: {aws_credentials_name}")
 
-    # Get the ACCOUNT_NUMBER.
+    # Get the AWS account number from the custom/config.json file.
     account_number = get_account_number_from_config_file()
     print(f"Your AWS account number: {account_number}")
 
-    # Sanity check ACCOUNT_NUMBER with what AWS tells us it is.
+    # Get the AWS credentials context.
     with aws.establish_credentials():
         print(f"Your AWS access key: {aws.access_key_id}")
         print(f"Your AWS access secret: {obfuscate(aws.secret_access_key)}")
+        print(f"Your AWS default region: {aws.default_region}")
+        print(f"Your AWS account number: {aws.account_number}")
         if account_number != aws.account_number:
-            custom_config_file = get_custom_config_file()
-            print(f"WARNING: Account number from your config file ({account_number}) not the same AWS credentials account ({aws.account_number}).")
+            print(f"WARNING: Account number from your config file ({account_number}) does not match AWS ({aws.account_number}).")
         secrets_to_update["ACCOUNT_NUMBER"] = aws.account_number
 
     # Get the IAM "federator" user name.
