@@ -118,10 +118,11 @@ def main():
 
     # Get the IAM "federator" user name.
     federated_user_name = args.federated_user if args.federated_user else aws.get_federated_user_name()
-    print(f"Federated AWS user: {federated_user_name}")
+    print(f"AWS federated user is: {federated_user_name}")
 
     # Get the ElasticSearch server/host name.
     es_server = aws.get_opensearch_endpoint(aws_credentials_name)
+    print(f"AWS ElasticSearch server is: {es_server}")
     secrets_to_update["ENCODED_ES_SERVER"] = es_server
 
     # Get the RDS hostname and password,
@@ -152,7 +153,7 @@ def main():
             print(f"- {customer_managed_kms_key}")
     else:
         s3_encrypt_key_id = customer_managed_kms_keys[0]
-        print(f"Customer managed AWS KMS (S3 encrypt) key ID is: {s3_encrypt_key_id}")
+        print(f"AWS customer managed KMS (S3 encrypt) key ID is: {s3_encrypt_key_id}")
         secrets_to_update["ENCODED_S3_ENCRYPT_KEY_ID"] = s3_encrypt_key_id
 
     # Create the security credentials access key/secret pait for the IAM "federator" user.
