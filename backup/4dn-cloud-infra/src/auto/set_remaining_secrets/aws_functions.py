@@ -124,7 +124,7 @@ class AwsFunctions(AwsContext):
                 return iam_user_name
             return None
 
-    def get_kms_keys(self, customer: bool):
+    def get_customer_managed_kms_keys(self):
         result_keys = []
         with super().establish_credentials():
             kms = boto3.client("kms")
@@ -133,7 +133,7 @@ class AwsFunctions(AwsContext):
                 key_description = kms.describe_key(KeyId=key_id)
                 key_metadata = key_description["KeyMetadata"]
                 key_manager = key_metadata["KeyManager"]
-                if not customer or key_manager == "CUSTOMER":
+                if key_manager == "CUSTOMER":
                     result_keys.append(key_id)
         return result_keys
 

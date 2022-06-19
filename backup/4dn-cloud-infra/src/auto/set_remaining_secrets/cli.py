@@ -112,7 +112,7 @@ def main():
     # Get the AWS credentials context.
     with aws.establish_credentials():
         print(f"Your AWS access key: {aws.access_key_id}")
-        print(f"Your AWS access secret: {obfuscate(aws.secret_access_key)}")
+        print(f"Your AWS access secret: {aws.secret_access_key if args.show else obfuscate(aws.secret_access_key)}")
         print(f"Your AWS default region: {aws.default_region}")
         print(f"Your AWS account number: {aws.account_number}")
         if account_number != aws.account_number:
@@ -122,11 +122,6 @@ def main():
     # Get the IAM "federator" user name.
     iam_federator_user_name = aws.get_federated_user_name()
     print(f"Federated AWS user: {iam_federator_user_name}")
-
-    # Create the security credentials access key/secret pait for the IAM "federator" user.
-    key_id, key_secret = aws.create_user_access_key(iam_federator_user_name)
-    secrets_to_update["S3_AWS_ACCESS_KEY_ID"] = key_id
-    secrets_to_update["S3_AWS_SECRET_ACCESS_KEY"] = key_secret
 
     # Get the ElasticSearch server/host name.
     es_server = aws.get_opensearch_endpoint(aws_credentials_name)
@@ -145,19 +140,33 @@ def main():
     rds_hostname = aws.get_secret_value(rds_secret_name, "host")
     print(f"RDS host name is: {rds_hostname}")
     rds_password = aws.get_secret_value(rds_secret_name, "password")
-    print(f"RDS host password is: {obfuscate(rds_password)}")
+    print(f"RDS host password is: {rds_password if args.show else obfuscate(rds_password)}")
     secrets_to_update["RDS_HOST"] = rds_hostname
     secrets_to_update["RDS_PASSWORD"] = rds_password
 
     # Get the ENCODED_S3_ENCRYPT_KEY_ID from KMS.
     # TODO: what to do if more than one exists?
-    s3_encrypt_key_id = aws.get_kms_keys(True)
-    secrets_to_update["ENCODED_S3_ENCRYPT_KEY_ID"] = s3_encrypt_key_id[0]
+    customer_managed_kms_keys = aws.get_customer_managed_kms_keys()
+    if not customer_managed_kms_keys or len(customer_managed_kms_keys) == 0:
+        print("Cannot find a customer managed KMS key in AWS.")
+    elif customer_managed_kms_keys and len(customer_managed_kms_keys) > 1:
+        print("More than one customer managed KMS key found in AWS.")
+        for customer_managed_kms_key in sorted(customer_managed_kms_keys, key=lambda key: key):
+            print(f"- {customer_managed_kms_key}")
+    else:
+        s3_encrypt_key_id = customer_managed_kms_keys[0]
+        print(f"Customer managed AWS KMS (S3 encrypt) key ID is: {s3_encrypt_key_id}")
+        secrets_to_update["ENCODED_S3_ENCRYPT_KEY_ID"] = s3_encrypt_key_id
+
+    # Create the security credentials access key/secret pait for the IAM "federator" user.
+    key_id, key_secret = aws.create_user_access_key(iam_federator_user_name)
+    secrets_to_update["S3_AWS_ACCESS_KEY_ID"] = key_id
+    secrets_to_update["S3_AWS_SECRET_ACCESS_KEY"] = key_secret
 
     print(f"Here are the secrets which will be set for secret: {identity}")
     for secret_key, secret_value in secrets_to_update.items():
         if should_obfuscate(secret_key):
-            print(f"- {secret_key}: {obfuscate(secret_value)}")
+            print(f"- {secret_key}: {secret_value if args.show else obfuscate(secret_value)}")
         else:
             print(f"- {secret_key}: {secret_value}")
     yes_or_no = input("Do you want to go ahead and set these secrets in AWS? [yes/no] ").strip().lower()
