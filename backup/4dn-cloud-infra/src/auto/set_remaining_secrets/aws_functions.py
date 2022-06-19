@@ -2,6 +2,7 @@ import boto3
 import json
 import re
 from .aws_context import AwsContext
+from .utils import (obfuscate, should_obfuscate)
 
 class AwsFunctions(AwsContext):
 
@@ -30,11 +31,11 @@ class AwsFunctions(AwsContext):
         Updates the AWS secret value for the given secret key name within the given secret name.
         If the given secret key value does not yet exist it will be created.
         If the given secret key value is None then the given secret key will be deleted.
+        This is an command-line interactive process, prompting the user for info/confirmation.
         :param secrets_manager: AWS secrets manager ala boto3.
         :param secret_name: AWS secret name.
         :param secret_key_name: AWS secret key name to update.
         :param secret_key_value: AWS secret key value to update to. If None then the secret key will be deleted.
-        :param prompt: Prompt for confirmation (from stdin) if True otherwise silent.
         :return: True if succeeded otherwise false.
         """
         with super().establish_credentials():
@@ -145,6 +146,12 @@ class AwsFunctions(AwsContext):
             return domain_endpoint
 
     def create_user_access_key(self, user_name: str) -> [str,str]:
+        """
+        Create an AWS security credentials access key pair for the given IAM user name.
+        This is an command-line interactive process, prompting the user for info/confirmation.
+        :param user_name: AWS IAM user name.
+        :return: Tuple containing the access key ID and associated secret.
+        """
         with super().establish_credentials():
             iam = boto3.resource('iam')
             user = [user for user in iam.users.all() if user.name == user_name]
