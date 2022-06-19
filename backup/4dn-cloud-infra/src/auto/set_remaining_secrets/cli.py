@@ -8,10 +8,10 @@ import io
 import json
 import os
 import re
+from ...names import Names
 from ..init_custom_dir.defs import (InfraDirectories, InfraFiles)
 from .aws_functions import AwsFunctions
 from .utils import (obfuscate, should_obfuscate)
-from ...names import Names
 
 # QUESTION:
 # Where to get AWS credentials from?

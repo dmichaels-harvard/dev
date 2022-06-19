@@ -102,6 +102,23 @@ class AwsFunctions(AwsContext):
                 print(f"EXCEPTION: {str(e)}")
             return False
 
+    def find_iam_user_name(self, user_name_pattern: str) -> str:
+        """
+        Returns the first AWS IAM user name in which
+        matches the given (regular expression) pattern.
+        :param user_name_pattern: Regular expression for user name.
+        :return: Matched user name or None if none found.
+        """
+        with super().establish_credentials():
+            iam = boto3.resource('iam')
+            users = iam.users.all()
+            for user in sorted(users, key=lambda user: user.name):
+                user_name = user.name
+                if not re.search(user_name_pattern, user_name):
+                    continue
+                return user_name
+        return None
+
     def get_federated_user_name(self):
         # TODO: For our anticipated use case (setting up remaining secrets for 4dn-cloud-infra deploy),
         # we will use the IAM user with a name containing "ApplicationS3Federator" where this string
@@ -113,18 +130,14 @@ class AwsFunctions(AwsContext):
         # in 4dn-cloud-infra/src/parts/iam.py/build_template(). 
         # federator_user_name_pattern = "ApplicationS3Federator"
         # return aws_find_iam_user(custom_dir, federator_user_name_pattern)
-        federated_iam_user_name_pattern = "ApplicationS3Federator"
-        with super().establish_credentials():
-            iam = boto3.resource('iam')
-            iam_users = iam.users.all()
-            for iam_user in sorted(iam_users, key=lambda user: user.name):
-                iam_user_name = iam_user.name
-                if not re.search(federated_iam_user_name_pattern, iam_user_name):
-                    continue
-                return iam_user_name
-            return None
+        federated_user_name_pattern = "ApplicationS3Federator"
+        return self.find_iam_user_name(federated_user_name_pattern)
 
     def get_customer_managed_kms_keys(self):
+        """
+        Returns the customer managed AWS KMS key IDs.
+        :return: List of customer managed KMS key IDs; empty list of none found.
+        """
         result_keys = []
         with super().establish_credentials():
             kms = boto3.client("kms")
@@ -138,7 +151,13 @@ class AwsFunctions(AwsContext):
         return result_keys
 
     def get_opensearch_endpoint(self, aws_credentials_name: str):
+        """
+        Returns the endpoint (host:port) for the ElasticSearch instance associated
+        with the given AWS credentials name (e.g. cgap-supertest).
+        :return: Endpoint (host:port) for ElasticSearch or None if not found.
+        """
         with super().establish_credentials():
+            # TODO: Get this name from somewhere in 4dn-cloud-infra.
             opensearch_instance_name = f"es-{aws_credentials_name}"
             opensearch = boto3.client('opensearch')
             domain_names = opensearch.list_domain_names()["DomainNames"]

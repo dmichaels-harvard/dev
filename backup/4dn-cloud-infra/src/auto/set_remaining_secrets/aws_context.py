@@ -7,6 +7,7 @@ class AwsContext:
     Class to setup the context for AWS credentials which do NOT rely on environment at all.
     I.e. neither on the AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY environment variables, nor
     on the ~/.aws/credentials file (or the AWS_SHARED_CREDENTIALS_FILE environment variable).
+
     A specific path to the ~/.aws credentials directory must be specified, which will setup
     the context to refer to the 'credentials' and 'config' file(s) there; or, specific
     AWS access key ID and associated secret access key values need to be specified; the
