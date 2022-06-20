@@ -187,7 +187,7 @@ def main():
             print(f"WARNING: Account number from your config file ({account_number}) does not match AWS ({credentials.account_number}).")
         secrets_to_update["ACCOUNT_NUMBER"] = credentials.account_number
 
-    # Get the IAM "federator" user name.
+    # Get the IAM "federated" user name.
     if args.federated_user:
         federated_user_name = args.federated_user
     else:
@@ -236,7 +236,7 @@ def main():
             print(f"AWS customer managed KMS (S3 encrypt) key ID: {s3_encrypt_key_id}")
             secrets_to_update["ENCODED_S3_ENCRYPT_KEY_ID"] = s3_encrypt_key_id
 
-    # Create the security access key/secret pait for the IAM "federator" user.
+    # Create the security access key/secret pait for the IAM "federated" user.
     if federated_user_name:
         key_id, key_secret = aws.create_user_access_key(federated_user_name)
         secrets_to_update["S3_AWS_ACCESS_KEY_ID"] = key_id
