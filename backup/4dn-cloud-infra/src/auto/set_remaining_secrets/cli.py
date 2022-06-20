@@ -83,8 +83,8 @@ def get_custom_config_file(custom_dir: str = None):
     return InfraFiles.get_config_file(custom_dir)
 
 
-def get_custom_config_file_value(name: str):
-    custom_config_file = get_custom_config_file()
+def get_custom_config_file_value(custom_dir: str, name: str):
+    custom_config_file = get_custom_config_file(custom_dir)
     with io.open(custom_config_file, "r") as custom_config_fp:
         custom_config_json = json.load(custom_config_fp)
         return custom_config_json.get(name)
@@ -92,15 +92,15 @@ def get_custom_config_file_value(name: str):
 
 
 def get_aws_credentials_name(custom_dir: str = None) -> str:
-    return get_custom_config_file_value("ENCODED_ENV_NAME")
+    return get_custom_config_file_value(custom_dir, "ENCODED_ENV_NAME")
 
 
-def get_account_number_from_config_file() -> str:
-    return get_custom_config_file_value("account_number")
+def get_account_number_from_config_file(custom_dir: str = None) -> str:
+    return get_custom_config_file_value(custom_dir, "account_number")
 
 
 def get_s3_bucket_encryption_from_config_file(custom_dir: str = None) -> bool:
-    return get_custom_config_file_value("s3.bucket.encryption")
+    return get_custom_config_file_value(custom_dir, "s3.bucket.encryption")
 
 
 def get_identity(aws_credentials_name: str) -> str:
@@ -138,7 +138,7 @@ def main():
     custom_dir = get_custom_dir(args.custom_dir)
     custom_aws_creds_dir = get_custom_aws_creds_dir(custom_dir)
     custom_config_file = get_custom_config_file(custom_dir)
-    aws_credentials_name = get_aws_credentials_name()
+    aws_credentials_name = get_aws_credentials_name(custom_dir)
 
     # Get AWS credentials context object.
     aws = AwsFunctions(custom_aws_creds_dir, args.access_key, args.secret_key, args.region)
@@ -164,7 +164,7 @@ def main():
             print(f"Your AWS credentials name: {aws_credentials_name}")
 
     # Get the AWS ACCOUNT_NUMBER value from the custom/config.json file.
-    account_number = get_account_number_from_config_file()
+    account_number = get_account_number_from_config_file(custom_dir)
     print(f"Your AWS account number: {account_number}")
 
     # Verify the AWS credentials context and get the associated ACCOUNT_NUMBER value.
@@ -219,7 +219,7 @@ def main():
 
     # Get the ENCODED_S3_ENCRYPT_KEY_ID from KMS.
     # Only needed if s3.bucket.encryption is True in the local custom config file.
-    s3_bucket_encryption = get_s3_bucket_encryption_from_config_file()
+    s3_bucket_encryption = get_s3_bucket_encryption_from_config_file(custom_dir)
     print(f"S3 bucket encryption enabled: {'Yes' if s3_bucket_encryption else 'No'}")
     if not s3_bucket_encryption:
         customer_managed_kms_keys = aws.get_customer_managed_kms_keys()
@@ -244,17 +244,19 @@ def main():
     # Summarize the secrets which will be set in the GAC.
     print(f"Here are the secrets which will be set for secret: {identity}")
     for secret_key, secret_value in sorted(secrets_to_update.items(), key=lambda item: item[0]):
-        display_secret_value = secret_value if args.show or not should_obfuscate(secret_key) else obfuscate(secret_value)
+        if secret_value is None:
+            display_secret_value = "<no-value-specified: will be deleted>"
+        elif should_obfuscate(secret_key) and not args.show:
+            display_secret_value = obfuscate(secret_value)
+        else:
+            display_secret_value = secret_value
         print(f"- {secret_key}: {display_secret_value}")
 
     # Confirm that the user wants to got ahead and set these values, and if so, set them.
     yes_or_no = input("Do you want to go ahead and set these secrets in AWS? [yes/no] ").strip().lower()
     if yes_or_no == "yes":
         for secret_key_name, secret_key_value in secrets_to_update.items():
-            print(f"Updating {identity}.{secret_key_name} to: {secret_key_value}")
-            yes_or_no = input("Really? [yes/no] ").strip().lower()
-            if yes_or_no == "yes":
-                aws.update_secret_key_value(identity, secret_key_name, secret_key_value)
+            aws.update_secret_key_value(identity, secret_key_name, secret_key_value, args.show)
         print("Not actually setting now. Testing.")
     else:
         print("No action taken.")

@@ -39,7 +39,8 @@ class AwsFunctions(AwsContext):
     def update_secret_key_value(self,
                                 secret_name: str,
                                 secret_key_name: str,
-                                secret_key_value: str) -> bool:
+                                secret_key_value: str,
+                                show: bool = False) -> bool:
         """
         Updates the AWS secret value for the given secret key name within the given secret name.
         If the given secret key value does not yet exist it will be created.
@@ -75,7 +76,7 @@ class AwsFunctions(AwsContext):
                         print(f"AWS secret {secret_name}.{secret_key_name} does not yet exist.")
                         action = "create"
                     else:
-                        if should_obfuscate(secret_key_name):
+                        if should_obfuscate(secret_key_name) and not show:
                             print(f"Current value of AWS secret looks like it is sensitive: {secret_name}.{secret_key_name}")
                             yes_or_no = input("Show in plaintext? [yes/no] ").strip().lower()
                             if yes_or_no:
@@ -204,8 +205,7 @@ class AwsFunctions(AwsContext):
                     yes_or_no = input("Do you still want to create a new access key? [yes/no] ").strip().lower()
                     if yes_or_no != "yes":
                         return None, None
-            print(f"The created access key and secret will be displayed in plaintext.")
-            yes_or_no = input("Do you want to continue? [yes/no] ").strip().lower()
+            yes_or_no = input("The created access secret will be displayed in plaintext. Continue? [yes/no] ").strip().lower()
             if yes_or_no == "yes":
                 key_pair = user.create_access_key_pair()
                 print(f"AWS Access Key ID ({user.name}): {key_pair.id}")
