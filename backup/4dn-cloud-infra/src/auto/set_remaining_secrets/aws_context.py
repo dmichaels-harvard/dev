@@ -5,14 +5,14 @@ import os
 
 class AwsContext:
     """
-    Class to setup the context for AWS credentials which do NOT rely on environment at all.
+    Class to setup the context for AWS credentials which do NOT rely on environment AT ALL.
     I.e. neither on the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables,
     nor on the ~/.aws credentials and config files (nor on the AWS_SHARED_CREDENTIALS_FILE
     and AWS_CONFIG_FILE environment variables).
 
-    A specific path to the ~/.aws credentials directory must be specified, which will
-    setup the context to refer to the credentials and config file(s) there; or, specific
-    AWS access key ID and associated secret access key (and default region) values need
+    A specific path to the ~/.aws credentials directory MUST be specified, which will
+    setup the context to refer to the credentials and config file(s) there; OR, specific
+    AWS access key ID and associated secret access key (and default region) values MUST
     to be specified; the latter taking precedence over the former. Usage like this:
 
         aws = AwsContext(your_custom_aws_directory)
@@ -37,9 +37,11 @@ class AwsContext:
         Context manager to establish AWS credentials without using environment,
         rather using the explicit AWS credentials directory or the explicit
         credentials values passed to the constructor of this object.
+
         Implementation note: to do this we temporarily (for the life of the context
         manager context) blow away the pertinent AWS credentials related environment variables.
-        :return: Yields named tuple containing: access_key_id, secret_access_key, default_region, account_number.
+
+        :return: Yields named tuple with: access_key_id, secret_access_key, default_region, account_number.
         """
 
         def save_and_unset_environment_variables(environment_variables: list) -> list:

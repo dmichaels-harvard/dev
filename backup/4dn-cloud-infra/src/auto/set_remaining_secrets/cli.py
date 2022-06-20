@@ -91,12 +91,16 @@ def get_custom_config_file_value(name: str):
     return None
 
 
-def get_account_number_from_config_file():
+def get_aws_credentials_name(custom_dir: str = None) -> str:
+    return get_custom_config_file_value("ENCODED_ENV_NAME")
+
+
+def get_account_number_from_config_file() -> str:
     return get_custom_config_file_value("account_number")
 
 
-def get_aws_credentials_name(custom_dir: str = None):
-    return get_custom_config_file_value("ENCODED_ENV_NAME")
+def get_s3_bucket_encryption_from_config_file(custom_dir: str = None) -> bool:
+    return get_custom_config_file_value("s3.bucket.encryption")
 
 
 def get_identity(aws_credentials_name: str) -> str:
@@ -147,6 +151,9 @@ def main():
 
     print(f"Your custom directory: {custom_dir}")
     print(f"Your custom config file: {custom_config_file}")
+    print(f"Your AWS credentials name: {aws_credentials_name}")
+    # TODO: If access key and secrets key specified via command-line should also require region?
+    # i.e. so that we're not split between getting some values from command-line and some from AWS config file?
     if not args.access_key or not args.secret_key:
         custom_aws_creds_dir_symlink_target = os.readlink(custom_aws_creds_dir) if os.path.islink(custom_aws_creds_dir) else None
         if custom_aws_creds_dir_symlink_target:
@@ -211,18 +218,22 @@ def main():
         secrets_to_update["RDS_PASSWORD"] = rds_password
 
     # Get the ENCODED_S3_ENCRYPT_KEY_ID from KMS.
-    customer_managed_kms_keys = aws.get_customer_managed_kms_keys()
-    if not customer_managed_kms_keys or len(customer_managed_kms_keys) == 0:
-        print("Cannot find a customer managed KMS key in AWS.")
-    elif customer_managed_kms_keys and len(customer_managed_kms_keys) > 1:
-        # TODO: What to do here if more than one exists?
-        print("More than one customer managed KMS key found in AWS.")
-        for customer_managed_kms_key in sorted(customer_managed_kms_keys, key=lambda key: key):
-            print(f"- {customer_managed_kms_key}")
-    else:
-        s3_encrypt_key_id = customer_managed_kms_keys[0]
-        print(f"AWS customer managed KMS (S3 encrypt) key ID: {s3_encrypt_key_id}")
-        secrets_to_update["ENCODED_S3_ENCRYPT_KEY_ID"] = s3_encrypt_key_id
+    # Only needed if s3.bucket.encryption is True in the local custom config file.
+    s3_bucket_encryption = get_s3_bucket_encryption_from_config_file()
+    print(f"S3 bucket encryption enabled: {'Yes' if s3_bucket_encryption else 'No'}")
+    if not s3_bucket_encryption:
+        customer_managed_kms_keys = aws.get_customer_managed_kms_keys()
+        if not customer_managed_kms_keys or len(customer_managed_kms_keys) == 0:
+            print("Cannot find a customer managed KMS key in AWS.")
+        elif customer_managed_kms_keys and len(customer_managed_kms_keys) > 1:
+            # TODO: What to do here if more than one exists?
+            print("More than one customer managed KMS key found in AWS.")
+            for customer_managed_kms_key in sorted(customer_managed_kms_keys, key=lambda key: key):
+                print(f"- {customer_managed_kms_key}")
+        else:
+            s3_encrypt_key_id = customer_managed_kms_keys[0]
+            print(f"AWS customer managed KMS (S3 encrypt) key ID: {s3_encrypt_key_id}")
+            secrets_to_update["ENCODED_S3_ENCRYPT_KEY_ID"] = s3_encrypt_key_id
 
     # Create the security credentials access key/secret pait for the IAM "federator" user.
     if federated_user_name:
