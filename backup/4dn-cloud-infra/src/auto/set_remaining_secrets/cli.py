@@ -153,7 +153,7 @@ def main():
     print(f"Your custom config file: {custom_config_file}")
     print(f"Your AWS credentials name: {aws_credentials_name}")
     # TODO: If access key and secrets key specified via command-line should also require region?
-    # i.e. so that we're not split between getting some values from command-line and some from AWS config file?
+    # i.e. so we're not split with some values from command-line and some from AWS credentials/config files?
     if not args.access_key or not args.secret_key:
         custom_aws_creds_dir_symlink_target = os.readlink(custom_aws_creds_dir) if os.path.islink(custom_aws_creds_dir) else None
         if custom_aws_creds_dir_symlink_target:

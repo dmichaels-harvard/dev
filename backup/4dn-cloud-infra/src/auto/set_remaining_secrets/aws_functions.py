@@ -155,9 +155,7 @@ class AwsFunctions(AwsContext):
         # this value at datastore provisioning time, rather than going to AWS?
 
         with super().establish_credentials():
-
             # TODO: Get this name from somewhere in 4dn-cloud-infra.
-
             opensearch_instance_name = f"es-{aws_credentials_name}"
             opensearch = boto3.client('opensearch')
             domain_names = opensearch.list_domain_names()["DomainNames"]
