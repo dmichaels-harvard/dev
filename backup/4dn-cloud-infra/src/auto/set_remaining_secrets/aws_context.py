@@ -15,7 +15,7 @@ class AwsContext:
     AWS access key ID and associated secret access key (and default region) values MUST
     to be specified; the latter taking precedence over the former. Usage like this:
 
-        aws = AwsContext(your_custom_aws_directory)
+        aws = AwsContext(your_aws_credentials_directory_or_access_key_id_and_secret_access_key)
         with aws.establish_credentials() as credentials:
             do_something_with_boto3()
             # if desired reference credentials values ...
@@ -44,26 +44,26 @@ class AwsContext:
         :return: Yields named tuple with: access_key_id, secret_access_key, default_region, account_number.
         """
 
-        def save_and_unset_environment_variables(environment_variables: list) -> list:
-            saved_environment_variables = {}
+        def unset_environ(environment_variables: list) -> list:
+            saved_environ = {}
             for environment_variable in environment_variables:
-                saved_environment_variables[environment_variable] = os.environ.pop(environment_variable, None)
+                saved_environ[environment_variable] = os.environ.pop(environment_variable, None)
                 if environment_variable.endswith("_FILE"):
                     os.environ[environment_variable] = "/dev/null"
-            return saved_environment_variables
+            return saved_environ
 
-        def restore_environment_variables(saved_environment_variables: list) -> None:
-            for saved_environment_variable, saved_environment_variable_value in saved_environment_variables.items():
-                if saved_environment_variable_value is not None:
-                    os.environ[saved_environment_variable] = saved_environment_variable_value
+        def restore_environ(saved_environ: list) -> None:
+            for saved_environ_key, saved_environ_value in saved_environ.items():
+                if saved_environ_value is not None:
+                    os.environ[saved_environ_key] = saved_environ_value
                 else:
-                    os.environ.pop(saved_environment_variable, None)
+                    os.environ.pop(saved_environ_key, None)
 
-        saved_environment_variables = save_and_unset_environment_variables([ "AWS_ACCESS_KEY_ID",
-                                                                             "AWS_SECRET_ACCESS_KEY",
-                                                                             "AWS_SHARED_CREDENTIALS_FILE",
-                                                                             "AWS_CONFIG_FILE",
-                                                                             "AWS_DEFAULT_REGION" ])
+        saved_environ = unset_environ([ "AWS_ACCESS_KEY_ID",
+                                        "AWS_SECRET_ACCESS_KEY",
+                                        "AWS_SHARED_CREDENTIALS_FILE",
+                                        "AWS_CONFIG_FILE",
+                                        "AWS_DEFAULT_REGION" ])
 
         # This reset of the boto3.DEFAULT_SESSION is to workaround an odd problem with boto3
         # caching a default session, even bad or non-existent credentials. This problem was
@@ -73,6 +73,9 @@ class AwsContext:
         boto3.DEFAULT_SESSION = None
 
         try:
+            # TODO: Should we require all credentials, INCLUDING region, to come from EITHER
+            # given arguments (i.e. command-line, ultimately) XOR from given AWS credentials
+            # directory? I.e. so as not to split between them which may create some confusion.
             if self._aws_access_key_id and self._aws_secret_access_key:
                 os.environ["AWS_ACCESS_KEY_ID"] = self._aws_access_key_id
                 os.environ["AWS_SECRET_ACCESS_KEY"] = self._aws_secret_access_key
@@ -103,4 +106,4 @@ class AwsContext:
             # TODO
             print(f"EXCEPTION! {str(e)}")
         finally:
-            restore_environment_variables(saved_environment_variables)
+            restore_environ(saved_environ)
