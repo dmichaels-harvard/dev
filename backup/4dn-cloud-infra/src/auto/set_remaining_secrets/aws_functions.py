@@ -79,14 +79,22 @@ class AwsFunctions(AwsContext):
                         if should_obfuscate(secret_key_name) and not show:
                             print(f"Current value of AWS secret looks like it is sensitive: {secret_name}.{secret_key_name}")
                             yes_or_no = input("Show in plaintext? [yes/no] ").strip().lower()
-                            if yes_or_no:
-                                print(f"Current value of AWS secret {secret_name}.{secret_key_name} is: {secret_key_value_current}")
+                            if yes_or_no == "yes":
+                                print(f"Current value of AWS secret {secret_name}.{secret_key_name}: {secret_key_value_current}")
                             else:
-                                print(f"Current value of AWS secret {secret_name}.{secret_key_name} is: {obfuscate(secret_key_value_current)}")
+                                print(f"Current value of AWS secret {secret_name}.{secret_key_name}: {obfuscate(secret_key_value_current)}")
                         else:
-                            print(f"Current value of AWS secret {secret_name}.{secret_key_name} is: {secret_key_value_current}")
+                            print(f"Current value of AWS secret {secret_name}.{secret_key_name}: {secret_key_value_current}")
                         action = "update"
-                    print(f"New value of AWS secret {secret_name}.{secret_key_name} is: {secret_key_value}")
+                    if should_obfuscate(secret_key_name) and not show:
+                        print(f"New value of AWS secret looks like it is sensitive: {secret_name}.{secret_key_name}")
+                        yes_or_no = input("Show in plaintext? [yes/no] ").strip().lower()
+                        if yes_or_no == "yes":
+                            print(f"New value of AWS secret {secret_name}.{secret_key_name}: {secret_key_value}")
+                        else:
+                            print(f"New value of AWS secret {secret_name}.{secret_key_name}: {obfuscate(secret_key_value)}")
+                    else:
+                        print(f"New value of AWS secret {secret_name}.{secret_key_name}: {secret_key_value}")
                     if secret_key_value_current == secret_key_value:
                         print("Values are not different. Nothing to update.")
                         return False
