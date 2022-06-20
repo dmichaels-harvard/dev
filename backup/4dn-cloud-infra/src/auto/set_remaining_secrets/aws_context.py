@@ -37,6 +37,8 @@ class AwsContext:
         Context manager to establish AWS credentials without using environment,
         rather using the explicit AWS credentials directory or the explicit
         credentials values passed to the constructor of this object.
+        Implementation note: to do this we temporarily (for the life of the context
+        manager context) blow away the pertinent AWS credentials related environment variables.
         :return: Yields named tuple containing: access_key_id, secret_access_key, default_region, account_number.
         """
 
@@ -62,9 +64,10 @@ class AwsContext:
                                                                              "AWS_DEFAULT_REGION" ])
 
         # This reset of the boto3.DEFAULT_SESSION is to workaround an odd problem with boto3
-        # caching a default session even bad or non-existent credentials. It was manifest due
-        # to importing (ultimately) modules from dcicutils (e.g. env_utils) which ultimately
-        # globally create a boto3 session when no credentials are in effect.
+        # caching a default session, even bad or non-existent credentials. This problem was
+        # exhibited when importing (ultimately) modules from dcicutils (e.g. env_utils)
+        # which (ultimately) globally creates a boto3 session with no credentials in effect.
+        # Ref: https://stackoverflow.com/questions/36894947/boto3-uses-old-credentials
         boto3.DEFAULT_SESSION = None
 
         try:
@@ -95,6 +98,7 @@ class AwsContext:
                              default_region=default_region,
                              account_number=account_number)
         except Exception as e:
+            # TODO
             print(f"EXCEPTION! {str(e)}")
         finally:
             restore_environment_variables(saved_environment_variables)
