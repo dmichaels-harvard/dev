@@ -178,7 +178,7 @@ class AwsFunctions(AwsContext):
 
     def create_user_access_key(self, user_name: str) -> [str,str]:
         """
-        Create an AWS security credentials access key pair for the given IAM user name.
+        Create an AWS security access key pair for the given IAM user name.
         This is an command-line interactive process, prompting the user for info/confirmation.
         And, the secret part of the access key pair will be printed in plaintext,
         because this is the only time it will ever be available.
@@ -195,15 +195,15 @@ class AwsFunctions(AwsContext):
                 print("Too many AWS users found for: {user_name}")
                 return None, None
             user = user[0]
-            print(f"Creating AWS security credentials access key pair for user: {user.name}")
+            print(f"Creating AWS security access key pair for AWS IAM user: {user.name}")
             existing_keys = boto3.client('iam').list_access_keys(UserName=user.name)
             if existing_keys:
                 existing_keys = existing_keys.get("AccessKeyMetadata")
                 if existing_keys and len(existing_keys) > 0:
                     if len(existing_keys) ==  1:
-                        print(f"This user ({user.name}) already has an access key defined:")
+                        print(f"AWS IAM user ({user.name}) already has an access key defined:")
                     else:
-                        print(f"This user ({user.name}) already has {len(existing_keys)} access keys defined:")
+                        print(f"AWS IAM user ({user.name}) already has {len(existing_keys)} access keys defined:")
                     for existing_key in existing_keys:
                         existing_access_key_id = existing_key["AccessKeyId"]
                         existing_access_key_create_date = existing_key["CreateDate"]
