@@ -118,7 +118,7 @@ def get_identity(aws_credentials_name: str) -> str:
 def main():
 
     args_parser = argparse.ArgumentParser()
-    args_parser.add_argument("--custom-dir", type=str, required=False)
+    args_parser.add_argument("--custom-dir", type=str, required=False, default=InfraDirectories.CUSTOM_DIR)
     args_parser.add_argument("--access-key", type=str, required=False)
     args_parser.add_argument("--secret-key", type=str, required=False)
     args_parser.add_argument("--region", type=str, required=False)
@@ -131,8 +131,7 @@ def main():
     secrets_to_update = {}
 
     # Gather the basic info.
-    custom_dir = "custom"
-    custom_dir = get_custom_dir(custom_dir)
+    custom_dir = get_custom_dir(args.custom_dir)
     custom_aws_creds_dir = get_custom_aws_creds_dir(custom_dir)
     custom_config_file = get_custom_config_file(custom_dir)
     aws_credentials_name = get_aws_credentials_name()
