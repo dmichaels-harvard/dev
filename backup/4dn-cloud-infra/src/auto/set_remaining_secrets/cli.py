@@ -165,8 +165,8 @@ def main():
     if not args.access_key or not args.secret_key:
         custom_aws_creds_dir_symlink_target = os.readlink(custom_aws_creds_dir) if os.path.islink(custom_aws_creds_dir) else None
         if custom_aws_creds_dir_symlink_target:
-            print(f"Your AWS credentials directory: {custom_aws_creds_dir}@ ->")
-            print(f"                                {custom_aws_creds_dir_symlink_target}")
+            print(f"Your AWS credentials directory (link): {custom_aws_creds_dir}@ ->")
+            print(f"Your AWS credentials directory (real): {custom_aws_creds_dir_symlink_target}")
         else:
             print(f"Your AWS credentials directory: {custom_aws_creds_dir}")
             print(f"Your AWS credentials name: {aws_credentials_name}")
@@ -182,6 +182,7 @@ def main():
         print(f"Your AWS access secret: {credentials.secret_access_key if args.show else obfuscate(credentials.secret_access_key)}")
         print(f"Your AWS default region: {credentials.default_region}")
         print(f"Your AWS account number: {credentials.account_number}")
+        print(f"Your AWS account user ARN: {credentials.user_arn}")
         if account_number != credentials.account_number:
             # TODO: Should this be a hard error?
             print(f"WARNING: Account number from your config file ({account_number}) does not match AWS ({credentials.account_number}).")

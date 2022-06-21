@@ -25,11 +25,17 @@ class AwsContext:
             account_number = credentials.account_number
     """
 
-    def __init__(self, custom_aws_creds_dir: str, access_key: str = None, secret_key: str = None, region: str = None):
-        self._custom_aws_creds_dir = custom_aws_creds_dir
-        self._aws_access_key_id = access_key
-        self._aws_secret_access_key = secret_key
-        self._aws_default_region = region
+    def __init__(self, aws_credentials_dir: str, aws_access_key_id: str = None, aws_secret_access_key: str = None, aws_default_region: str = None):
+        """
+        Constructor when stores the given AWS credentials directory, and AWS access key ID
+        and secret access key and default region for use when establishing AWS credentials.
+        The latter takes precedene.
+        """
+        self._aws_credentials_dir = aws_credentials_dir
+        self._aws_access_key_id = aws_access_key_id
+        self._aws_secret_access_key = aws_secret_access_key
+        self._aws_default_region = aws_default_region
+        self._reset_boto3_default_session = True
 
     @contextlib.contextmanager
     def establish_credentials(self):
@@ -39,9 +45,10 @@ class AwsContext:
         credentials values passed to the constructor of this object.
 
         Implementation note: to do this we temporarily (for the life of the context
-        manager context) blow away the pertinent AWS credentials related environment variables.
+        manager context) blow away the pertinent AWS credentials related environment
+        variables, and set them appropriately based on given credentials information.
 
-        :return: Yields named tuple with: access_key_id, secret_access_key, default_region, account_number.
+        :return: Yields named tuple with: access_key_id, secret_access_key, default_region, account_number, user_arn.
         """
 
         def unset_environ(environment_variables: list) -> list:
@@ -66,11 +73,16 @@ class AwsContext:
                                         "AWS_DEFAULT_REGION" ])
 
         # This reset of the boto3.DEFAULT_SESSION is to workaround an odd problem with boto3
-        # caching a default session, even bad or non-existent credentials. This problem was
-        # exhibited when importing (ultimately) modules from dcicutils (e.g. env_utils)
+        # caching a default session, even for bad or non-existent credentials. This problem
+        # was exhibited when importing (ultimately) modules from dcicutils (e.g. env_utils)
         # which (ultimately) globally creates a boto3 session with no credentials in effect.
+        # Then our boto3 usage failed (here) with AWS credentials environment variables set.
+        # Try just doing this once (per AwsContext object creation) so as not to totally
+        # undermine the (probably beneficial) caching that boto3 is trying to do.
         # Ref: https://stackoverflow.com/questions/36894947/boto3-uses-old-credentials
-        boto3.DEFAULT_SESSION = None
+        if self._reset_boto3_default_session:
+            boto3.DEFAULT_SESSION = None
+            self._reset_boto3_default_session = False
 
         try:
             # TODO: Should we require all credentials, INCLUDING region, to come from EITHER
@@ -80,28 +92,31 @@ class AwsContext:
                 os.environ["AWS_ACCESS_KEY_ID"] = self._aws_access_key_id
                 os.environ["AWS_SECRET_ACCESS_KEY"] = self._aws_secret_access_key
             else:
-                custom_aws_creds_credentials_file = os.path.join(self._custom_aws_creds_dir, "credentials")
-                if os.path.isfile(custom_aws_creds_credentials_file):
-                    os.environ["AWS_SHARED_CREDENTIALS_FILE"] = custom_aws_creds_credentials_file
+                aws_credentials_file = os.path.join(self._aws_credentials_dir, "credentials")
+                if os.path.isfile(aws_credentials_file):
+                    os.environ["AWS_SHARED_CREDENTIALS_FILE"] = aws_credentials_file
                 else:
                     raise Exception("No AWS credentials specified.")
             if self._aws_default_region:
                 os.environ["AWS_DEFAULT_REGION"] = self._aws_default_region
             else:
-                custom_aws_creds_config_file = os.path.join(self._custom_aws_creds_dir, "config")
-                if os.path.isfile(custom_aws_creds_config_file):
-                    os.environ["AWS_CONFIG_FILE"] = custom_aws_creds_config_file
+                aws_config_file = os.path.join(self._aws_credentials_dir, "config")
+                if os.path.isfile(aws_config_file):
+                    os.environ["AWS_CONFIG_FILE"] = aws_config_file
             session = boto3.session.Session()
             credentials = session.get_credentials()
             access_key_id = credentials.access_key
             secret_access_key = credentials.secret_key
             default_region = session.region_name
-            account_number = boto3.client("sts").get_caller_identity()["Account"]
-            yield namedtuple("aws", "access_key_id secret_access_key default_region account_number") \
+            caller_identity = boto3.client("sts").get_caller_identity()
+            account_number = caller_identity["Account"]
+            user_arn = caller_identity["Arn"]
+            yield namedtuple("aws", "access_key_id secret_access_key default_region account_number user_arn") \
                             (access_key_id=access_key_id,
                              secret_access_key=secret_access_key,
                              default_region=default_region,
-                             account_number=account_number)
+                             account_number=account_number,
+                             user_arn=user_arn)
         except Exception as e:
             # TODO
             print(f"EXCEPTION! {str(e)}")
