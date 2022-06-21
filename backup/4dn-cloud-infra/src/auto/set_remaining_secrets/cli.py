@@ -225,7 +225,7 @@ def main():
     # Get the ENCODED_S3_ENCRYPT_KEY_ID from KMS.
     # Only needed if s3.bucket.encryption is True in the local custom config file.
     s3_bucket_encryption = get_s3_bucket_encryption_from_config_file(custom_dir)
-    print(f"S3 bucket encryption enabled: {'Yes' if s3_bucket_encryption else 'No'}")
+    print(f"AWS S3 bucket encryption enabled: {'Yes' if s3_bucket_encryption else 'No'}")
     if not s3_bucket_encryption:
         customer_managed_kms_keys = aws.get_customer_managed_kms_keys()
         if not customer_managed_kms_keys or len(customer_managed_kms_keys) == 0:

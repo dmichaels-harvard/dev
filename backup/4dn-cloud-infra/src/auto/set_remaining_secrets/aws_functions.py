@@ -45,11 +45,10 @@ class AwsFunctions(AwsContext):
         Updates the AWS secret value for the given secret key name within the given secret name.
         If the given secret key value does not yet exist it will be created.
         If the given secret key value is None then the given secret key will be deleted.
-        This is an command-line interactive process, prompting the user for info/confirmation.
-        :param secrets_manager: AWS secrets manager ala boto3.
+        This is a command-line interactive process, prompting the user for info/confirmation.
         :param secret_name: AWS secret name.
         :param secret_key_name: AWS secret key name to update.
-        :param secret_key_value: AWS secret key value to update to. If None then the secret key will be deleted.
+        :param secret_key_value: AWS secret key value to update to. If None the secret key will be deleted.
         :return: True if succeeded otherwise false.
         """
         with super().establish_credentials():
@@ -174,7 +173,7 @@ class AwsFunctions(AwsContext):
     def create_user_access_key(self, user_name: str) -> [str,str]:
         """
         Create an AWS security access key pair for the given IAM user name.
-        This is an command-line interactive process, prompting the user for info/confirmation.
+        This is a command-line interactive process, prompting the user for info/confirmation.
         And, the secret part of the access key pair will be printed in plaintext,
         because this is the only time it will ever be available.
         :param user_name: AWS IAM user name.
