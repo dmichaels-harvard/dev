@@ -82,7 +82,8 @@ class AwsContext:
                                         "AWS_SECRET_ACCESS_KEY",
                                         "AWS_SHARED_CREDENTIALS_FILE",
                                         "AWS_CONFIG_FILE",
-                                        "AWS_DEFAULT_REGION" ])
+                                        "AWS_DEFAULT_REGION",
+                                        "AWS_SESSION_TOKEN" ])
 
         # This reset of the boto3.DEFAULT_SESSION is to workaround an odd problem with boto3
         # caching a default session, even for bad or non-existent credentials. This problem
@@ -137,7 +138,7 @@ class AwsContext:
                              user_arn=user_arn)
         except Exception as e:
             # TODO: Raise exception? Or just let exception trigger (i.e. don't catch)?
-            print(f"EXCEPTION! {str(e)}")
+            PRINT(f"EXCEPTION! {str(e)}")
         finally:
             # Restore any deleted/modified AWS credentials related environment variables.
             restore_environ(saved_environ)

@@ -77,6 +77,7 @@ import re
 # NOTE: This imports dcicutils.cloudformation_utils which (ultimately) instantiates a boto3
 # client globally which causes a boto3.DEFAULT_SESSION to be cached, with incorrect credentials,
 # which messes up our AwsContext; workaround is to set boto3.DEFAULT_SESSION to None in AwsContext.
+from dcicutils.misc_utils import PRINT
 from ...names import Names
 from ..init_custom_dir.defs import (InfraDirectories, InfraFiles)
 from .aws_functions import AwsFunctions
@@ -125,10 +126,10 @@ def get_global_application_secret_name(aws_credentials_name: str) -> str:
     :return: Identity (global application configuration name) as gotten from the main 4dn-cloud-infra code.
     """
     try:
-        identity_value = Names.application_configuration_secret(aws_credentials_name)
+        global_application_secret_name = Names.application_configuration_secret(aws_credentials_name)
     except Exception:
-        identity_value = None
-    return identity_value
+        global_application_secret_name = None
+    return global_application_secret_name
 
 
 def get_rds_secret_name(aws_credentials_name: str) -> str:
@@ -176,118 +177,121 @@ def main():
     global_application_secret_name = args.identity if args.identity else get_global_application_secret_name(aws_credentials_name)
     rds_secret_name = get_rds_secret_name(aws_credentials_name)
 
-    # Get the "identity" name, i.e. the global application confguration (GAC) secret name.
+    # Get the "identity" name, i.e. the global application confguration secret name.
     secrets_to_update["ENCODED_IDENTITY"] = global_application_secret_name
 
-    print(f"Setting up 4dn-cloud-infra remaining AWS secrets for: {global_application_secret_name}")
+    PRINT(f"Setting up 4dn-cloud-infra remaining AWS secrets for: {global_application_secret_name}")
 
-    print(f"Your custom directory: {custom_dir}")
-    print(f"Your custom config file: {custom_config_file}")
-    print(f"Your AWS credentials name: {aws_credentials_name}")
+    PRINT(f"Your custom directory: {custom_dir}")
+    PRINT(f"Your custom config file: {custom_config_file}")
+    PRINT(f"Your AWS credentials name: {aws_credentials_name}")
     # TODO: If access key and secrets key specified via command-line should also require region?
     # i.e. so we're not split with some values from command-line and some from AWS credentials/config files?
     if not args.access_key or not args.secret_key:
         custom_aws_creds_dir_symlink_target = os.readlink(custom_aws_creds_dir) if os.path.islink(custom_aws_creds_dir) else None
         if custom_aws_creds_dir_symlink_target:
-            print(f"Your AWS credentials directory (link): {custom_aws_creds_dir}@ ->")
-            print(f"Your AWS credentials directory (real): {custom_aws_creds_dir_symlink_target}")
+            PRINT(f"Your AWS credentials directory (link): {custom_aws_creds_dir}@ ->")
+            PRINT(f"Your AWS credentials directory (real): {custom_aws_creds_dir_symlink_target}")
         else:
-            print(f"Your AWS credentials directory: {custom_aws_creds_dir}")
-            print(f"Your AWS credentials name: {aws_credentials_name}")
+            PRINT(f"Your AWS credentials directory: {custom_aws_creds_dir}")
 
     # Get the AWS ACCOUNT_NUMBER value from the custom/config.json file.
     account_number = get_account_number_from_config_file(custom_dir)
-    print(f"Your AWS account number: {account_number}")
+    PRINT(f"Your AWS account number: {account_number}")
 
     # Verify the AWS credentials context and get the associated ACCOUNT_NUMBER value.
     # If ACCOUNT_NUMBER does not agree with what's in the config file (above) then warning (error?).
     with aws.establish_credentials() as credentials:
-        print(f"Your AWS access key: {credentials.access_key_id}")
-        print(f"Your AWS access secret: {credentials.secret_access_key if args.show else obfuscate(credentials.secret_access_key)}")
-        print(f"Your AWS default region: {credentials.default_region}")
-        print(f"Your AWS account number: {credentials.account_number}")
-        print(f"Your AWS account user ARN: {credentials.user_arn}")
+        PRINT(f"Your AWS access key: {credentials.access_key_id}")
+        PRINT(f"Your AWS access secret: {credentials.secret_access_key if args.show else obfuscate(credentials.secret_access_key)}")
+        PRINT(f"Your AWS default region: {credentials.default_region}")
+        PRINT(f"Your AWS account number: {credentials.account_number}")
+        PRINT(f"Your AWS account user ARN: {credentials.user_arn}")
         if account_number != credentials.account_number:
             # TODO: Should this be a hard error?
-            print(f"WARNING: Account number from your config file ({account_number}) does not match AWS ({credentials.account_number}).")
+            PRINT(f"WARNING: Account number from your config file ({account_number}) does not match AWS ({credentials.account_number}).")
         secrets_to_update["ACCOUNT_NUMBER"] = credentials.account_number
 
-    print(f"AWS global application configuration (GAC) secret name: {global_application_secret_name}")
-    print(f"AWS RDS secret name: {rds_secret_name}")
+    PRINT(f"AWS global application configuration secret name: {global_application_secret_name}")
+    PRINT(f"AWS RDS application configuration secret name: {rds_secret_name}")
 
     # Get the IAM "federated" user name.
     if args.federated_user:
         federated_user_name = args.federated_user
     else:
+        # TODO: get string from code.
         federated_user_name_pattern = "ApplicationS3Federator"
         federated_user_name = aws.find_iam_user_name(federated_user_name_pattern)
     if not federated_user_name:
         # TODO: Should this be a hard error?
-        print(f"ERROR: AWS federated user cannot be determined!")
+        PRINT(f"ERROR: AWS federated user cannot be determined!")
     else:
-        print(f"AWS federated user: {federated_user_name}")
+        PRINT(f"AWS application federated IAM user: {federated_user_name}")
 
     # Get the ElasticSearch host/port.
     es_server = aws.get_opensearch_endpoint(aws_credentials_name)
-    print(f"AWS ElasticSearch server: {es_server}")
+    PRINT(f"AWS application ElasticSearch server: {es_server}")
     secrets_to_update["ENCODED_ES_SERVER"] = es_server
 
     # Get the RDS hostname and password.
     if not rds_secret_name:
         # TODO: Should this be a hard error?
-        print(f"ERROR: Cannot determine RDS secret name!")
+        PRINT(f"ERROR: Cannot determine RDS secret name!")
     else:
         rds_hostname = aws.get_secret_value(rds_secret_name, "host")
-        print(f"RDS host name: {rds_hostname}")
+        PRINT(f"AWS application RDS host name: {rds_hostname}")
         rds_password = aws.get_secret_value(rds_secret_name, "password")
-        print(f"RDS host password: {rds_password if args.show else obfuscate(rds_password)}")
+        PRINT(f"AWS application RDS host password: {rds_password if args.show else obfuscate(rds_password)}")
         secrets_to_update["RDS_HOST"] = rds_hostname
         secrets_to_update["RDS_PASSWORD"] = rds_password
 
     # Get the ENCODED_S3_ENCRYPT_KEY_ID from KMS.
     # Only needed if s3.bucket.encryption is True in the local custom config file.
     s3_bucket_encryption = get_s3_bucket_encryption_from_config_file(custom_dir)
-    print(f"AWS S3 bucket encryption enabled: {'Yes' if s3_bucket_encryption else 'No'}")
+    PRINT(f"AWS application S3 bucket encryption enabled: {'Yes' if s3_bucket_encryption else 'No'}")
     if not s3_bucket_encryption:
         customer_managed_kms_keys = aws.get_customer_managed_kms_keys()
         if not customer_managed_kms_keys or len(customer_managed_kms_keys) == 0:
-            print("Cannot find a customer managed KMS key in AWS.")
+            PRINT("Cannot find a customer managed KMS key in AWS.")
         elif customer_managed_kms_keys and len(customer_managed_kms_keys) > 1:
             # TODO: What to do here if more than one exists?
-            print("More than one customer managed KMS key found in AWS.")
+            # warn function
+            PRINT("WARNING: More than one customer managed KMS key found in AWS.")
             for customer_managed_kms_key in sorted(customer_managed_kms_keys, key=lambda key: key):
-                print(f"- {customer_managed_kms_key}")
+                PRINT(f"- {customer_managed_kms_key}")
         else:
             s3_encrypt_key_id = customer_managed_kms_keys[0]
-            print(f"AWS customer managed KMS (S3 encrypt) key ID: {s3_encrypt_key_id}")
+            PRINT(f"AWS application customer managed KMS (S3 encrypt) key ID: {s3_encrypt_key_id}")
             secrets_to_update["ENCODED_S3_ENCRYPT_KEY_ID"] = s3_encrypt_key_id
 
     # Create the security access key/secret pair for the IAM "federated" user.
     if federated_user_name:
-        key_id, key_secret = aws.create_user_access_key(federated_user_name)
+        key_id, key_secret = aws.create_user_access_key(federated_user_name, args.show)
         secrets_to_update["S3_AWS_ACCESS_KEY_ID"] = key_id
         secrets_to_update["S3_AWS_SECRET_ACCESS_KEY"] = key_secret
 
-    # Summarize the secrets which will be set in the GAC.
-    print(f"Here are the secrets which will be set for secret: {global_application_secret_name}")
+    # Summarize the secrets which will be set in the global application configuration.
+    PRINT()
+    PRINT(f"Secret keys/values to be set in AWS secrets manager for secret: {global_application_secret_name}")
     for secret_key, secret_value in sorted(secrets_to_update.items(), key=lambda item: item[0]):
         if secret_value is None:
-            display_secret_value = "<no-value: will be deleted>"
+            display_secret_value = "<no-value: will marked as deactivated>"
         elif should_obfuscate(secret_key) and not args.show:
             display_secret_value = obfuscate(secret_value)
         else:
             display_secret_value = secret_value
-        print(f"- {secret_key}: {display_secret_value}")
+        PRINT(f"- {secret_key}: {display_secret_value}")
 
     # Confirm that the user wants to got ahead and set these values, and if so, set them.
     yes_or_no = input("Do you want to go ahead and set these secrets in AWS? [yes/no] ").strip().lower()
     if yes_or_no == "yes":
         for secret_key_name, secret_key_value in secrets_to_update.items():
+            PRINT("")
             aws.update_secret_key_value(global_application_secret_name, secret_key_name, secret_key_value, args.show)
-        print("Not actually setting now. Testing.")
     else:
-        print("No action taken.")
+        PRINT("Exiting without doing anything.")
 
 
 if __name__ == "__main__":
     main()
+    # TODO: list boto3 calls we're making

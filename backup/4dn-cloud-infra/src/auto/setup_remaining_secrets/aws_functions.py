@@ -1,6 +1,7 @@
 import boto3
 import json
 import re
+from dcicutils.misc_utils import PRINT
 from .aws_context import AwsContext
 from .utils import (obfuscate, should_obfuscate)
 
@@ -30,7 +31,8 @@ class AwsFunctions(AwsContext):
         """
         Updates the AWS secret value for the given secret key name within the given secret name.
         If the given secret key value does not yet exist it will be created.
-        If the given secret key value is None then the given secret key will be deleted.
+        If the given secret key value is None then the given secret key will be "deactivated",
+        where this means that its old value will be prepended with the string "DEACTIVATED:".
         This is a command-line interactive process, prompting the user for info/confirmation.
 
         :param secret_name: AWS secret name.
@@ -49,52 +51,52 @@ class AwsFunctions(AwsContext):
                 try:
                     secret_value = secrets_manager.get_secret_value(SecretId=secret_name)
                 except:
-                    print(f"AWS secret name does not exist: {secret_name}")
+                    PRINT(f"AWS secret name does not exist: {secret_name}")
                     return False
                 secret_value_json = json.loads(secret_value["SecretString"])
                 secret_key_value_current = secret_value_json.get(secret_key_name)
                 if secret_key_value is None:
                     if secret_key_value_current is None:
-                        print(f"AWS secret {secret_name}.{secret_key_name} does not exist. Nothing to delete.")
+                        PRINT(f"AWS secret {secret_name}.{secret_key_name} does not exist. Nothing to deactivate.")
                         return False
-                    action = "delete"
+                    action = "deactivate"
                 else:
                     if secret_key_value_current is None:
-                        print(f"AWS secret {secret_name}.{secret_key_name} does not yet exist.")
+                        PRINT(f"AWS secret {secret_name}.{secret_key_name} does not yet exist.")
                         action = "create"
                     else:
                         if should_obfuscate(secret_key_name) and not show:
-                            print(f"Current value of AWS secret looks like it is sensitive: {secret_name}.{secret_key_name}")
+                            PRINT(f"Current value of AWS secret looks like it is sensitive: {secret_name}.{secret_key_name}")
                             yes_or_no = input("Show in plaintext? [yes/no] ").strip().lower()
                             if yes_or_no == "yes":
-                                print(f"Current value of AWS secret {secret_name}.{secret_key_name}: {secret_key_value_current}")
+                                PRINT(f"Current value of AWS secret {secret_name}.{secret_key_name}: {secret_key_value_current}")
                             else:
-                                print(f"Current value of AWS secret {secret_name}.{secret_key_name}: {obfuscate(secret_key_value_current)}")
+                                PRINT(f"Current value of AWS secret {secret_name}.{secret_key_name}: {obfuscate(secret_key_value_current)}")
                         else:
-                            print(f"Current value of AWS secret {secret_name}.{secret_key_name}: {secret_key_value_current}")
+                            PRINT(f"Current value of AWS secret {secret_name}.{secret_key_name}: {secret_key_value_current}")
                         action = "update"
+                    if secret_key_value_current == secret_key_value:
+                        PRINT("Value of new AWS secret is the same as the current one. Nothing to update.")
+                        return False
                     if should_obfuscate(secret_key_name) and not show:
-                        print(f"New value of AWS secret looks like it is sensitive: {secret_name}.{secret_key_name}")
+                        PRINT(f"New value of AWS secret looks like it is sensitive: {secret_name}.{secret_key_name}")
                         yes_or_no = input("Show in plaintext? [yes/no] ").strip().lower()
                         if yes_or_no == "yes":
-                            print(f"New value of AWS secret {secret_name}.{secret_key_name}: {secret_key_value}")
+                            PRINT(f"New value of AWS secret {secret_name}.{secret_key_name}: {secret_key_value}")
                         else:
-                            print(f"New value of AWS secret {secret_name}.{secret_key_name}: {obfuscate(secret_key_value)}")
+                            PRINT(f"New value of AWS secret {secret_name}.{secret_key_name}: {obfuscate(secret_key_value)}")
                     else:
-                        print(f"New value of AWS secret {secret_name}.{secret_key_name}: {secret_key_value}")
-                    if secret_key_value_current == secret_key_value:
-                        print("Values are not different. Nothing to update.")
-                        return False
+                        PRINT(f"New value of AWS secret {secret_name}.{secret_key_name}: {secret_key_value}")
                 yes_or_no = input(f"Are you sure you want to {action} AWS secret {secret_name}.{secret_key_name}? [yes/no] ").strip().lower()
                 if yes_or_no == "yes":
                     if secret_key_value is None:
-                        del secret_value_json[secret_key_name]
+                        secret_value_json[secret_key_name] = "DEACTIVATED:" + secret_value_json[secret_key_name]
                     else:
                         secret_value_json[secret_key_name] = secret_key_value
                     secrets_manager.update_secret(SecretId=secret_name, SecretString=json.dumps(secret_value_json))
                     return True
             except Exception as e:
-                print(f"EXCEPTION: {str(e)}")
+                PRINT(f"EXCEPTION: {str(e)}")
             return False
 
     def find_iam_user_name(self, user_name_pattern: str) -> str:
@@ -162,11 +164,10 @@ class AwsFunctions(AwsContext):
                 domain_endpoint = f"{domain_endpoint_vpc}:80"
             return domain_endpoint
 
-    def create_user_access_key(self, user_name: str) -> [str,str]:
+    def create_user_access_key(self, user_name: str, show: bool = False) -> [str,str]:
         """
         Create an AWS security access key pair for the given IAM user name.
         This is a command-line interactive process, prompting the user for info/confirmation.
-        And, the secret part of the access key pair will be printed in plaintext,
         because this is the only time it will ever be available.
 
         :param user_name: AWS IAM user name.
@@ -176,32 +177,32 @@ class AwsFunctions(AwsContext):
             iam = boto3.resource('iam')
             user = [user for user in iam.users.all() if user.name == user_name]
             if not user or len(user) <= 0:
-                print("AWS user not found: {user_name}")
+                PRINT("AWS user not found for security access key pair creation: {user_name}")
                 return None, None
             if len(user) > 1:
-                print("Too many AWS users found for: {user_name}")
+                PRINT("Multiple AWS users found for security access key pair creation: {user_name}")
                 return None, None
             user = user[0]
-            print(f"Creating AWS security access key pair for AWS IAM user: {user.name}")
             existing_keys = boto3.client('iam').list_access_keys(UserName=user.name)
             if existing_keys:
                 existing_keys = existing_keys.get("AccessKeyMetadata")
                 if existing_keys and len(existing_keys) > 0:
                     if len(existing_keys) ==  1:
-                        print(f"AWS IAM user ({user.name}) already has an access key defined:")
+                        PRINT(f"AWS IAM user ({user.name}) already has an access key defined:")
                     else:
-                        print(f"AWS IAM user ({user.name}) already has {len(existing_keys)} access keys defined:")
+                        PRINT(f"AWS IAM user ({user.name}) already has {len(existing_keys)} access keys defined:")
                     for existing_key in existing_keys:
                         existing_access_key_id = existing_key["AccessKeyId"]
                         existing_access_key_create_date = existing_key["CreateDate"]
-                        print(f"- {existing_access_key_id} (created: {existing_access_key_create_date.astimezone().strftime('%Y-%m-%d %H:%M:%S')})")
+                        PRINT(f"- {existing_access_key_id} (created: {existing_access_key_create_date.astimezone().strftime('%Y-%m-%d %H:%M:%S')})")
                     yes_or_no = input("Do you still want to create a new access key? [yes/no] ").strip().lower()
                     if yes_or_no != "yes":
                         return None, None
-            yes_or_no = input("The created access secret will be displayed in plaintext. Continue? [yes/no] ").strip().lower()
+            PRINT(f"Creating AWS security access key pair for AWS IAM user: {user.name}")
+            yes_or_no = input(f"Continue? [yes/no] ").strip().lower()
             if yes_or_no == "yes":
                 key_pair = user.create_access_key_pair()
-                print(f"AWS Access Key ID ({user.name}): {key_pair.id}")
-                print(f"AWS Secret Access Key ({user.name}): {key_pair.secret}")
+                PRINT(f"- Created AWS Access Key ID ({user.name}): {key_pair.id}")
+                PRINT(f"- Created AWS Secret Access Key ({user.name}): {obfuscate(key_pair.secret)}")
                 return key_pair.id, key_pair.secret
             return None, None
