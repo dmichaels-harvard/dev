@@ -81,7 +81,7 @@ class AwsContext:
         # was exhibited when importing (ultimately) modules from dcicutils (e.g. env_utils)
         # which (ultimately) globally creates a boto3 session with no credentials in effect.
         # Then our boto3 usage failed (here) with AWS credentials environment variables set.
-        # Try just doing this once (per AwsContext object creation) so as not to totally
+        # Doing this just once (per AwsContext object creation) so as not to totally
         # undermine the (probably beneficial) caching that boto3 is trying to do.
         # Ref: https://stackoverflow.com/questions/36894947/boto3-uses-old-credentials
         if self._reset_boto3_default_session:
