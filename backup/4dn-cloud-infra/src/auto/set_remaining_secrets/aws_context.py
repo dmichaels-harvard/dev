@@ -76,8 +76,8 @@ class AwsContext:
                 else:
                     os.environ.pop(saved_environ_key, None)
 
-        # Temporarily (for the life of this context) delete
-        # any AWS credentials related environment variables.
+        # Temporarily (for the life of this context) unset/delete (here) and
+        # override (below) any AWS credentials related environment variables.
         saved_environ = unset_environ([ "AWS_ACCESS_KEY_ID",
                                         "AWS_SECRET_ACCESS_KEY",
                                         "AWS_SHARED_CREDENTIALS_FILE",

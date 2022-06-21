@@ -10,6 +10,7 @@ class AwsFunctions(AwsContext):
         """
         Returns the value of the given secret key name
         within the given secret name in the AWS secrets manager.
+
         :param secret_name: AWS secret name.
         :param secret_key_name: AWS secret key name.
         :return: Secret key value if found or None if not found.
@@ -31,9 +32,11 @@ class AwsFunctions(AwsContext):
         If the given secret key value does not yet exist it will be created.
         If the given secret key value is None then the given secret key will be deleted.
         This is a command-line interactive process, prompting the user for info/confirmation.
+
         :param secret_name: AWS secret name.
         :param secret_key_name: AWS secret key name to update.
-        :param secret_key_value: AWS secret key value to update to. If None the secret key will be deleted.
+        :param secret_key_value: AWS secret key value to update to; if None secret key will be deleted.
+        :param show: True to show in plaintext any displayed secret values. 
         :return: True if succeeded otherwise false.
         """
         with super().establish_credentials():
@@ -98,6 +101,7 @@ class AwsFunctions(AwsContext):
         """
         Returns the first AWS IAM user name in which
         matches the given (regular expression) pattern.
+
         :param user_name_pattern: Regular expression for user name.
         :return: Matched user name or None if none found.
         """
@@ -113,6 +117,7 @@ class AwsFunctions(AwsContext):
     def get_customer_managed_kms_keys(self):
         """
         Returns the customer managed AWS KMS key IDs.
+
         :return: List of customer managed KMS key IDs; empty list of none found.
         """
         kms_keys = []
@@ -131,6 +136,8 @@ class AwsFunctions(AwsContext):
         """
         Returns the endpoint (host:port) for the ElasticSearch instance associated
         with the given AWS credentials name (e.g. cgap-supertest).
+
+        :param aws_credentials_name: AWS credentials name (e.g. cgap-supertest).
         :return: Endpoint (host:port) for ElasticSearch or None if not found.
         """
         with super().establish_credentials():
@@ -161,6 +168,7 @@ class AwsFunctions(AwsContext):
         This is a command-line interactive process, prompting the user for info/confirmation.
         And, the secret part of the access key pair will be printed in plaintext,
         because this is the only time it will ever be available.
+
         :param user_name: AWS IAM user name.
         :return: Tuple containing the access key ID and associated secret.
         """
