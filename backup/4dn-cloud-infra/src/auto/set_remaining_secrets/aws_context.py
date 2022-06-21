@@ -57,6 +57,10 @@ class AwsContext:
         :return: Yields named tuple with: access_key_id, secret_access_key, default_region, account_number, user_arn.
         """
 
+        # TODO: Should we require all credentials, INCLUDING region, to come from EITHER
+        # given arguments (i.e. command-line, ultimately) XOR from given AWS credentials
+        # directory? I.e. so as not to split between them which may create some confusion.
+
         def unset_environ(environment_variables: list) -> list:
             saved_environ = {}
             for environment_variable in environment_variables:
@@ -72,6 +76,8 @@ class AwsContext:
                 else:
                     os.environ.pop(saved_environ_key, None)
 
+        # Temporarily (for the life of this context) delete
+        # any AWS credentials related environment variables.
         saved_environ = unset_environ([ "AWS_ACCESS_KEY_ID",
                                         "AWS_SECRET_ACCESS_KEY",
                                         "AWS_SHARED_CREDENTIALS_FILE",
@@ -85,15 +91,15 @@ class AwsContext:
         # Then our boto3 usage failed (here) with AWS credentials environment variables set.
         # Doing this just once (per AwsContext object creation) so as not to totally
         # undermine the (probably beneficial) caching that boto3 is trying to do.
+        #
         # Ref: https://stackoverflow.com/questions/36894947/boto3-uses-old-credentials
+        # Ref: https://github.com/boto/boto3/issues/1574
         if self._reset_boto3_default_session:
             boto3.DEFAULT_SESSION = None
             self._reset_boto3_default_session = False
 
         try:
-            # TODO: Should we require all credentials, INCLUDING region, to come from EITHER
-            # given arguments (i.e. command-line, ultimately) XOR from given AWS credentials
-            # directory? I.e. so as not to split between them which may create some confusion.
+            # Setup AWS environment variables for our specified credentials.
             if self._aws_access_key_id and self._aws_secret_access_key:
                 os.environ["AWS_ACCESS_KEY_ID"] = self._aws_access_key_id
                 os.environ["AWS_SECRET_ACCESS_KEY"] = self._aws_secret_access_key
@@ -109,6 +115,10 @@ class AwsContext:
                 aws_config_file = os.path.join(self._aws_credentials_dir, "config")
                 if os.path.isfile(aws_config_file):
                     os.environ["AWS_CONFIG_FILE"] = aws_config_file
+
+            # Setup AWS boto3 session/client to get basic AWS credentials info;
+            # and serves to test those credentials as well.
+            # TODO: What exactly to do on error. Just raise exception?
             session = boto3.session.Session()
             credentials = session.get_credentials()
             access_key_id = credentials.access_key
@@ -117,6 +127,8 @@ class AwsContext:
             caller_identity = boto3.client("sts").get_caller_identity()
             account_number = caller_identity["Account"]
             user_arn = caller_identity["Arn"]
+
+            # Yield pertinent AWS credentials info for caller in case they need/want them. 
             yield namedtuple("aws", "access_key_id secret_access_key default_region account_number user_arn") \
                             (access_key_id=access_key_id,
                              secret_access_key=secret_access_key,
@@ -124,7 +136,8 @@ class AwsContext:
                              account_number=account_number,
                              user_arn=user_arn)
         except Exception as e:
-            # TODO
+            # TODO: Raise exception? Or just let exception trigger (i.e. don't catch)?
             print(f"EXCEPTION! {str(e)}")
         finally:
+            # Restore any deleted/modified AWS credentials related environment variables.
             restore_environ(saved_environ)
