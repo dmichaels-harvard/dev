@@ -13,23 +13,25 @@ class AwsContext:
     A specific path to the ~/.aws credentials directory MUST be specified, which will
     setup the context to refer to the credentials and config file(s) there; OR, specific
     AWS access key ID and associated secret access key (and default region) values MUST
-    to be specified; the latter taking precedence over the former. Usage like this:
+    be specified; the latter taking precedence over the former. Usage like this:
 
         aws = AwsContext(your_aws_credentials_directory_or_access_key_id_and_secret_access_key)
         with aws.establish_credentials() as credentials:
             do_something_with_boto3()
-            # if desired reference credentials values ...
-            access_key_id = credentials.access_key_id
-            secret_access_key = credentials.secret_access_key
-            default_region = credentials.default_region
-            account_number = credentials.account_number
+            # if desired reference/use credentials values ...
+            aws_access_key_id = credentials.access_key_id
+            aws_secret_access_key = credentials.secret_access_key
+            aws_default_region = credentials.default_region
+            aws_account_number = credentials.account_number
+            aws_user_arn = credentials.user_arn
     """
 
     def __init__(self, aws_credentials_dir: str, aws_access_key_id: str = None, aws_secret_access_key: str = None, aws_default_region: str = None):
         """
-        Constructor when stores the given AWS credentials directory, and AWS access key ID
-        and secret access key and default region for use when establishing AWS credentials.
+        Constructor which stores the given AWS credentials directory, and AWS access key ID
+        and secret access key (and default region) for use when establishing AWS credentials.
         The latter takes precedence.
+
         :param aws_credentials_dir: Path to AWS credentials directory.
         :param aws_access_key_id: AWS credentials access key ID.
         :param aws_secret_access_key: AWS credentials secret access key.
