@@ -57,7 +57,7 @@
 #
 # - S3_AWS_ACCESS_KEY_ID, S3_AWS_SECRET_ACCESS_KEY
 #   Get these by creating AWS security access key pair for the "federated" IAM user.
-#   Get federated IAM user name (e.g. c4-iam-main-stack-C4IAMMainApplicationS3Federator-ZFK91VU2DM1H)
+#   TODO: Get federated IAM user name (e.g. c4-iam-main-stack-C4IAMMainApplicationS3Federator-ZFK91VU2DM1H)
 #   from AWS IAM user whose name contains "ApplicationS3Federator" which (that string)
 #   is referenced/hardcoded in ecs_s3_iam_user() in iam.py.
 #   Ref: AwsFunctions.create_user_access_key()
