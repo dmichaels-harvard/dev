@@ -29,7 +29,11 @@ class AwsContext:
         """
         Constructor when stores the given AWS credentials directory, and AWS access key ID
         and secret access key and default region for use when establishing AWS credentials.
-        The latter takes precedene.
+        The latter takes precedence.
+        :param aws_credentials_dir: Path to AWS credentials directory.
+        :param aws_access_key_id: AWS credentials access key ID.
+        :param aws_secret_access_key: AWS credentials secret access key.
+        :param aws_default_region: AWS credentials default region.
         """
         self._aws_credentials_dir = aws_credentials_dir
         self._aws_access_key_id = aws_access_key_id

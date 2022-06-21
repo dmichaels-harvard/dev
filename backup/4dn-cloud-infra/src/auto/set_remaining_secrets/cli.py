@@ -134,6 +134,7 @@ def main():
     args_parser.add_argument("--access-key", type=str, required=False)
     args_parser.add_argument("--secret-key", type=str, required=False)
     args_parser.add_argument("--region", type=str, required=False)
+    args_parser.add_argument("--credentials-dir", type=str, required=False)
     args_parser.add_argument("--identity", type=str, required=False)
     args_parser.add_argument("--federated-user", type=str, required=False)
     args_parser.add_argument("--show", action="store_true", required=False)
@@ -144,7 +145,7 @@ def main():
 
     # Gather the basic info.
     custom_dir = get_custom_dir(args.custom_dir)
-    custom_aws_creds_dir = get_custom_aws_creds_dir(custom_dir)
+    custom_aws_creds_dir = args.credentials_dir if args.credentials_dir else get_custom_aws_creds_dir(custom_dir)
     custom_config_file = get_custom_config_file(custom_dir)
     aws_credentials_name = get_aws_credentials_name(custom_dir)
 
@@ -187,6 +188,8 @@ def main():
             # TODO: Should this be a hard error?
             print(f"WARNING: Account number from your config file ({account_number}) does not match AWS ({credentials.account_number}).")
         secrets_to_update["ACCOUNT_NUMBER"] = credentials.account_number
+
+    print(f"AWS global application configuration (GAC) secret name: {identity}")
 
     # Get the IAM "federated" user name.
     if args.federated_user:
