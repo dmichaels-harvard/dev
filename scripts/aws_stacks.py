@@ -52,12 +52,16 @@ def print_aws_stacks(name: str,
         if name and not name.lower() in stack_name.lower():
             continue
         stack_updated = stack.last_updated_time
+        if stack.stack_status:
+            status = f" | {stack.stack_status.replace('_', '-').lower()}"
+        else:
+            status = ""
         if stack_updated:
-            print("%-15s (updated: %s)" % (stack_name, stack_updated.astimezone().strftime("%Y-%m-%d %H:%M:%S")))
+            print("%-15s (updated: %s%s)" % (stack_name, stack_updated.astimezone().strftime("%Y-%m-%d %H:%M:%S"), status))
         else:
             stack_created = stack.creation_time
             if stack_created:
-                print("%-15s (created: %s)" % (stack_name, stack_created.astimezone().strftime("%Y-%m-%d %H:%M:%S")))
+                print("%-15s (created: %s%s)" % (stack_name, stack_created.astimezone().strftime("%Y-%m-%d %H:%M:%S"), status))
             else:
                 print("%-15s" % (stack_name))
         if outputs:
