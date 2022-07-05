@@ -47,7 +47,7 @@ def print_aws_stacks(name: str,
     # about a lot of the underlying details when interacting with AWS services.
     c4 = boto3.resource('cloudformation', aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region)
     stacks = c4.stacks.all()
-    for stack in stacks:
+    for stack in sorted(stacks, key=lambda key: key.name):
         stack_name = stack.name
         if name and not name.lower() in stack_name.lower():
             continue
