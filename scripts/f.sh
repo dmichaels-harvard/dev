@@ -7,6 +7,7 @@
 #             [file_pattern]
 #             [--dir directory_name]
 #             [--text]
+#             [--python]
 #             [--list]
 #             [--num]
 #             [--symlinks]
@@ -14,8 +15,10 @@
 #             [--quiet]
 #             [--exclude directory_names_to_exclude...]
 #
-# The --dir option will make find from given directory rather than current (.) directory.
+# The file_pattern will make find search only files with names matching this.
+# The --dir option will make find from given directory rather than default current (.) directory.
 # The --text option turns on the grep -I option which skips binary files.
+# The --python option is shorthand for file_pattern == '*.py'.
 # The --list option turns on the grep -l option which only lists file names/paths matched.
 # The --num option turns on the grep -n option which includes line numbers.
 # The --symlinks option makes find follow symlinks.
@@ -68,7 +71,7 @@ while [ $# -gt 0 ]; do
     elif [ "$1" = "--quiet" -o "$1" = "-quiet" -o "$1" = "--q" -o "$1" = "-q" ]; then
         QUIET=1
         shift 1
-    elif [ "$1" = "--vi" -o "$1" = "-vi" -o "$1" = "--vim" -o "$1" = "-vim" ]; then
+    elif [ "$1" = "--vim" -o "$1" = "-vim" -o "$1" = "--vi" -o "$1" = "-vi" -o "$1" = "--v" -o "$1" = "-v" ]; then
         VIM=1
         QUIET=1
         shift 1
@@ -99,7 +102,7 @@ while [ $# -gt 0 ]; do
         #
         FILE_PATTERN="-name \"*.py\""
         shift 1
-    elif [ "$1" = "--exclude" -o "$1" = "-exclude" -o "$1" = "--excludes" -o "$1" = "-excludes" -o "$1" = "--x"  -o "$1" = "-x" ]; then
+    elif [ "$1" = "--excludes" -o "$1" = "-excludes" -o "$1" = "--exclude" -o "$1" = "-exclude" -o "$1" = "--x"  -o "$1" = "-x" ]; then
         #
         # Get the directories to exclude from the find.
         #
@@ -109,16 +112,23 @@ while [ $# -gt 0 ]; do
         shift 1
         while [ $# -gt 0 ]; do
             #
-            # Special case allow --dryrun or --debug within --exclude list.
+            # If we get any known options while doing this, i.e. while
+            # collecting directories to exclude, then break out of this.
             #
-            if [ "$1" = "--dryrun" -o "$1" = "-dryrun" ]; then
-                DRYRUN=1
-                shift 1
-                continue
-            elif [ "$1" = "--debug" -o "$1" = "-debug" ]; then
-                DEBUG=1
-                shift 1
-                continue
+            if [ "$1" = "--help" -o "$1" = "-help" \
+              -o "$1" = "--directory" -o "$1" = "-directory" -o "$1" = "--dir" -o "$1" = "-dir" -o "$1" = "--d" -o "$1" = "-d" \
+              -o "$1" = "--dryrun" -o "$1" = "-dryrun" \
+              -o "$1" = "--quiet" -o "$1" = "-quiet" -o "$1" = "--q" -o "$1" = "-q" \
+              -o "$1" = "--vi" -o "$1" = "-vi" -o "$1" = "--vim" -o "$1" = "-vim" \
+              -o "$1" = "--debug" -o "$1" = "-debug" \
+              -o "$1" = "--grep" -o "$1" = "-grep" \
+              -o "$1" = "--text" -o "$1" = "-text" -o "$1" = "--t" -o "$1" = "-t" \
+              -o "$1" = "--list" -o "$1" = "-list" -o "$1" = "--l" -o "$1" = "-l" \
+              -o "$1" = "--num" -o "$1" = "-num" -o "$1" = "--n" -o "$1" = "-n" \
+              -o "$1" = "--symlinks" -o "$1" = "-symlinks" -o "$1" = "--s" -o "$1" = "-s" \
+              -o "$1" = "--python" -o "$1" = "-python" -o "$1" = "--py" -o "$1" = "-py" \
+              -o "$1" = "--exclude" -o "$1" = "-exclude" -o "$1" = "--excludes" -o "$1" = "-excludes" -o "$1" = "--x"  -o "$1" = "-x" ]; then
+                break
             elif [[ "$1" == */ ]]; then
                 #
                 # Just in case they type directory name with trailing slash (can easily happen).
@@ -128,7 +138,7 @@ while [ $# -gt 0 ]; do
                 EXCLUDE_ARG=$1
             fi
             #
-            # Odd syntax for this but seems to work.
+            # Odd syntax for this directory exclusion thing, but seems to work.
             #
             EXCLUDE_DIRS="$EXCLUDE_DIRS -not -path '*/$EXCLUDE_ARG/*'"
             shift 1
