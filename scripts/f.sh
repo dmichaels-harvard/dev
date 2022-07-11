@@ -3,7 +3,9 @@
 # My very simple common find tool.
 # Ignore-case and/or as-word versions are in: ff.sh, fw.sh, ffw.sh
 #
-# usage: f.sh search_string [file_pattern]
+# usage: f.sh search_string
+#             [file_pattern]
+#             [--dir directory_name]
 #             [--text]
 #             [--list]
 #             [--num]
@@ -12,6 +14,7 @@
 #             [--quiet]
 #             [--exclude directory_names_to_exclude...]
 #
+# The --dir option will make find from given directory rather than current (.) directory.
 # The --text option turns on the grep -I option which skips binary files.
 # The --list option turns on the grep -l option which only lists file names/paths matched.
 # The --num option turns on the grep -n option which includes line numbers.
@@ -25,7 +28,9 @@ THIS_SCRIPT_NAME=`basename $0`
 function usage() {
     echo "usage: ${THIS_SCRIPT_NAME}"
     echo "       search_string [file_pattern]"
+    echo "       [--dir directory]"
     echo "       [--text]"
+    echo "       [--python]"
     echo "       [--list]"
     echo "       [--num]"
     echo "       [--dryrun]"
@@ -34,6 +39,7 @@ function usage() {
 }
 
 GREP='grep'
+DIRECTORY=.
 TEXT_FILES_ONLY=
 SEARCH_FOR=
 FILE_PATTERN=
@@ -50,6 +56,12 @@ VIM=
 while [ $# -gt 0 ]; do
     if [ "$1" = "--help" -o "$1" = "-help" ]; then
         usage
+    elif [ "$1" = "--directory" -o "$1" = "-directory" -o "$1" = "--dir" -o "$1" = "-dir" -o "$1" = "--d" -o "$1" = "-d" ]; then
+        if [ $# -eq 1 ]; then
+            usage
+        fi
+        DIRECTORY=$2
+        shift 2
     elif [ "$1" = "--dryrun" -o "$1" = "-dryrun" ]; then
         DRYRUN=1
         shift 1
@@ -81,7 +93,7 @@ while [ $# -gt 0 ]; do
     elif [ "$1" = "--symlinks" -o "$1" = "-symlinks" -o "$1" = "--s" -o "$1" = "-s" ]; then
         FIND_FOLLOW_SYMLINKS="-L"
         shift 1
-    elif [ "$1" = "--py" -o "$1" = "-py" ]; then
+    elif [ "$1" = "--python" -o "$1" = "-python" -o "$1" = "--py" -o "$1" = "-py" ]; then
         #
         # Just a shortcut for specifying "*.py" for the file pattern.
         #
@@ -137,7 +149,7 @@ if [ -z "$SEARCH_FOR"  ]; then
     usage
 fi
 
-COMMAND="find $FIND_FOLLOW_SYMLINKS . -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP $LIST_FILES_ONLY $TEXT_FILES_ONLY $LINE_NUMBERS -H \"$SEARCH_FOR\" {} \;"
+COMMAND="find $FIND_FOLLOW_SYMLINKS $DIRECTORY -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP $LIST_FILES_ONLY $TEXT_FILES_ONLY $LINE_NUMBERS -H \"$SEARCH_FOR\" {} \;"
 COMMAND=`echo $COMMAND | tr -s ' '`
 
 if [ ! -z $DEBUG ]; then
