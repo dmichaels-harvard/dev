@@ -50,7 +50,6 @@ DIRECTORY=.
 TEXT_FILES_ONLY=
 SEARCH_FOR=
 FILE_PATTERN=
-EXCLUDE_OPTION=
 EXCLUDE_DIRS=
 LIST_FILES_ONLY=
 LINE_NUMBERS=
@@ -123,7 +122,7 @@ while [ $# -gt 0 ]; do
               -o "$1" = "--directory" -o "$1" = "-directory" -o "$1" = "--dir" -o "$1" = "-dir" -o "$1" = "--d" -o "$1" = "-d" \
               -o "$1" = "--dryrun" -o "$1" = "-dryrun" \
               -o "$1" = "--quiet" -o "$1" = "-quiet" -o "$1" = "--q" -o "$1" = "-q" \
-              -o "$1" = "--vi" -o "$1" = "-vi" -o "$1" = "--vim" -o "$1" = "-vim" \
+              -o "$1" = "--vim" -o "$1" = "-vim" -o "$1" = "--vi" -o "$1" = "-vi" -o "$1" = "--v" -o "$1" = "-v" \
               -o "$1" = "--debug" -o "$1" = "-debug" \
               -o "$1" = "--grep" -o "$1" = "-grep" \
               -o "$1" = "--text" -o "$1" = "-text" -o "$1" = "--t" -o "$1" = "-t" \
@@ -131,7 +130,7 @@ while [ $# -gt 0 ]; do
               -o "$1" = "--num" -o "$1" = "-num" -o "$1" = "--n" -o "$1" = "-n" \
               -o "$1" = "--symlinks" -o "$1" = "-symlinks" -o "$1" = "--s" -o "$1" = "-s" \
               -o "$1" = "--python" -o "$1" = "-python" -o "$1" = "--py" -o "$1" = "-py" \
-              -o "$1" = "--exclude" -o "$1" = "-exclude" -o "$1" = "--excludes" -o "$1" = "-excludes" -o "$1" = "--x"  -o "$1" = "-x" ]; then
+              -o "$1" = "--excludes" -o "$1" = "-excludes" -o "$1" = "--exclude" -o "$1" = "-exclude" -o "$1" = "--x"  -o "$1" = "-x" ]; then
                 break
             elif [[ "$1" == */ ]]; then
                 #
