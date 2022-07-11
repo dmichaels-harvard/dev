@@ -1,7 +1,7 @@
 #!/bin/bash
 # --------------------------------------------------------------------------------------------------
-# My very simple common find tool.
-# Ignore-case and/or as-word versions are in: ff.sh, fw.sh, ffw.sh
+# My personal simple common find tool.
+# Case-insensitive and/or as-word versions are in: ff.sh, fw.sh, ffw.sh
 #
 # usage: f.sh search_string
 #             [file_pattern]
@@ -11,9 +11,11 @@
 #             [--list]
 #             [--num]
 #             [--symlinks]
+#             [--exclude directory_names_to_exclude...]
+#             [--vi]
 #             [--dryrun]
 #             [--quiet]
-#             [--exclude directory_names_to_exclude...]
+#             [--debug]
 #
 # The file_pattern will make find search only files with names matching this.
 # The --dir option will make find from given directory rather than default current (.) directory.
@@ -23,7 +25,9 @@
 # The --num option turns on the grep -n option which includes line numbers.
 # The --symlinks option makes find follow symlinks.
 # The --exclude option can be used to list one or more directory names to skip in the search.
+# The --vi redirects output to temporary file an invokes the vim editor with that.
 # The --dryrun option can be used to just to see the find command that would be run.
+# The --debug option turns on any debugging output for troubleshooting.
 # --------------------------------------------------------------------------------------------------
 
 THIS_SCRIPT_NAME=`basename $0`
