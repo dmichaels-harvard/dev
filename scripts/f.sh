@@ -13,8 +13,8 @@
 #             [--symlinks]
 #             [--exclude directory_names_to_exclude...]
 #             [--vi]
-#             [--dryrun]
 #             [--quiet]
+#             [--dryrun]
 #             [--debug]
 #
 # The file_pattern will make find search only files with names matching this.
@@ -40,8 +40,12 @@ function usage() {
     echo "       [--python]"
     echo "       [--list]"
     echo "       [--num]"
-    echo "       [--dryrun]"
+    echo "       [--symlinks]"
     echo "       [--exclude directory_names_to_exclude...]"
+    echo "       [--vi]"
+    echo "       [--quiet]"
+    echo "       [--dryrun]"
+    echo "       [--debug]"
     exit 1
 }
 
@@ -96,7 +100,7 @@ while [ $# -gt 0 ]; do
     elif [ "$1" = "--num" -o "$1" = "-num" -o "$1" = "--n" -o "$1" = "-n" ]; then
         LINE_NUMBERS="-n"
         shift 1
-    elif [ "$1" = "--symlinks" -o "$1" = "-symlinks" -o "$1" = "--s" -o "$1" = "-s" ]; then
+    elif [ "$1" = "--symlinks" -o "$1" = "-symlinks" -o "$1" = "--symlink" -o "$1" = "-symlink" -o "$1" = "--s" -o "$1" = "-s" ]; then
         FIND_FOLLOW_SYMLINKS="-L"
         shift 1
     elif [ "$1" = "--python" -o "$1" = "-python" -o "$1" = "--py" -o "$1" = "-py" ]; then
@@ -128,7 +132,7 @@ while [ $# -gt 0 ]; do
               -o "$1" = "--text" -o "$1" = "-text" -o "$1" = "--t" -o "$1" = "-t" \
               -o "$1" = "--list" -o "$1" = "-list" -o "$1" = "--l" -o "$1" = "-l" \
               -o "$1" = "--num" -o "$1" = "-num" -o "$1" = "--n" -o "$1" = "-n" \
-              -o "$1" = "--symlinks" -o "$1" = "-symlinks" -o "$1" = "--s" -o "$1" = "-s" \
+              -o "$1" = "--symlinks" -o "$1" = "-symlinks" -o "$1" = "--symlink" -o "$1" = "-symlink" -o "$1" = "--s" -o "$1" = "-s" \
               -o "$1" = "--python" -o "$1" = "-python" -o "$1" = "--py" -o "$1" = "-py" \
               -o "$1" = "--excludes" -o "$1" = "-excludes" -o "$1" = "--exclude" -o "$1" = "-exclude" -o "$1" = "--x"  -o "$1" = "-x" ]; then
                 break
