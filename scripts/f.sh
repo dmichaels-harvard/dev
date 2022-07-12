@@ -17,17 +17,19 @@
 #             [--dryrun]
 #             [--debug]
 #
-# The file_pattern will make find search only files with names matching this.
-# The --dir option will make find from given directory rather than default current (.) directory.
-# The --text option turns on the grep -I option which skips binary files.
-# The --python option is shorthand for file_pattern == '*.py'.
-# The --list option turns on the grep -l option which only lists file names/paths matched.
-# The --num option turns on the grep -n option which includes line numbers.
-# The --symlinks option makes find follow symlinks.
-# The --exclude option can be used to list one or more directory names to skip in the search.
-# The --vi redirects output to temporary file an invokes the vim editor with that.
-# The --dryrun option can be used to just to see the find command that would be run.
-# The --debug option turns on any debugging output for troubleshooting.
+# search_string: search pattern to find within files.
+# file_pattern:  find only within files with names matching this.
+# --file:        same as file_pattern.
+# --dir:         find from given directory rather than default current (.) directory.
+# --text:        turns on grep -I option which skips binary files.
+# --python:      shorthand for file_pattern of '*.py'.
+# --list:        turns on grep -l option to only list file names/paths matched.
+# --num:         turns on grep -n option to include line numbers.
+# --symlinks:    follow symlinks.
+# --exclude:     list one or more directory names to skip in the search.
+# --vi:          redirects output to temporary file and invokes the vim editor with that.
+# --dryrun:      to just to see the find command that would be run.
+# --debug:       turns on any debugging output for troubleshooting.
 # --------------------------------------------------------------------------------------------------
 
 THIS_SCRIPT_NAME=`basename $0`
@@ -71,6 +73,12 @@ while [ $# -gt 0 ]; do
             usage
         fi
         DIRECTORY=$2
+        shift 2
+    elif [ "$1" = "--file" -o "$1" = "-file" -o "$1" = "--f" -o "$1" = "-f" ]; then
+        if [ $# -eq 1 ]; then
+            usage
+        fi
+        FILE_PATTERN="-name \"$1\""
         shift 2
     elif [ "$1" = "--dryrun" -o "$1" = "-dryrun" ]; then
         DRYRUN=1
