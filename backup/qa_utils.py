@@ -1302,6 +1302,7 @@ class MockBoto3Ec2:
                                  for mocked_security_group in mocked_security_groups
                                  if mocked_security_group.get("name") == security_group_name]
         if mocked_security_group:
+            mocked_security_group = mocked_security_group[0]
             # Check for inconsistencies between the given security group name and
             # the security group ID in the given rule, and any already existing rules.
             for group in mocked_security_groups:
@@ -1322,7 +1323,7 @@ class MockBoto3Ec2:
         else:
             mocked_security_groups.append({ "name": security_group_name, "rules": [security_group_rule] })
 
-    def describe_security_groups(self, Filters: list) -> dict:  # noQA - Argument names chosen for AWS consistency
+    def describe_security_groups(self, Filters: Optional[list] = None) -> dict:  # noQA - Argument names chosen for AWS consistency
         if Filters:
             if len(Filters) != 1:
                 raise ValueError(f"Filters must be single-item list for mocked describe_security_groups.")
@@ -1337,7 +1338,7 @@ class MockBoto3Ec2:
                 raise ValueError(f"Values must contain a security group name for mocked describe_security_groups.")
         else:
             security_group_name = None
-        mocked_security_groups = _mocked_security_groups()
+        mocked_security_groups = self._mocked_security_groups()
         result_groups = []
         for group in mocked_security_groups:
             if not security_group_name or group["name"] == security_group_name:
@@ -1357,7 +1358,7 @@ class MockBoto3Ec2:
         security_group_id = filter_value[0]
         if not security_group_id:
             raise ValueError(f"Values must contain a security group ID for mocked describe_security_group_rules.")
-        mocked_security_groups = _mocked_security_groups()
+        mocked_security_groups = self._mocked_security_groups()
         for group in mocked_security_groups:
             for rule in group["rules"]:
                 if rule["GroupId"] == security_group_id:
