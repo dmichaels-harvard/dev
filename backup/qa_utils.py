@@ -1333,7 +1333,7 @@ class MockBoto3Ec2:
             filter_values = Filters[0].get("Values")
             if not isinstance(filter_values, list) or len(filter_values) != 1:
                 raise ValueError(f"Values must be a single-item list for mocked describe_security_groups.")
-            security_group_name = filter_value[0]
+            security_group_name = filter_values[0]
             if not security_group_name:
                 raise ValueError(f"Values must contain a security group name for mocked describe_security_groups.")
         else:
@@ -1355,7 +1355,7 @@ class MockBoto3Ec2:
         filter_values = Filters[0].get("Values")
         if not isinstance(filter_values, list) or len(filter_values) != 1:
             raise ValueError(f"Values must be a single-item list for mocked describe_security_group_rules.")
-        security_group_id = filter_value[0]
+        security_group_id = filter_values[0]
         if not security_group_id:
             raise ValueError(f"Values must contain a security group ID for mocked describe_security_group_rules.")
         mocked_security_groups = self._mocked_security_groups()
