@@ -132,6 +132,7 @@ while [ $# -gt 0 ]; do
             #
             if [ "$1" = "--help" -o "$1" = "-help" \
               -o "$1" = "--directory" -o "$1" = "-directory" -o "$1" = "--dir" -o "$1" = "-dir" -o "$1" = "--d" -o "$1" = "-d" \
+              -o "$1" = "--file" -o "$1" = "-file" -o "$1" = "--f" -o "$1" = "-f" \
               -o "$1" = "--dryrun" -o "$1" = "-dryrun" \
               -o "$1" = "--quiet" -o "$1" = "-quiet" -o "$1" = "--q" -o "$1" = "-q" \
               -o "$1" = "--vim" -o "$1" = "-vim" -o "$1" = "--vi" -o "$1" = "-vi" -o "$1" = "--v" -o "$1" = "-v" \
