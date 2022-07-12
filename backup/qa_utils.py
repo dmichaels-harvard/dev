@@ -1296,7 +1296,7 @@ class MockBoto3Ec2:
             raise ValueError(f"Missing rule GroupId for mocked put_security_group_rule_for_testing.")
         security_group_rule_id = security_group_rule.get("SecurityGroupRuleId")
         if not security_group_rule_id:
-            raise ValueError(f"Missing rule SecurityGroupRuleId for mocked put_security_group_rule_for_testing.")
+            security_group_rule["SecurityGroupRuleId"] = uuid.uuid4()
         mocked_security_groups = self._mocked_security_groups()
         mocked_security_group = [mocked_security_group
                                  for mocked_security_group in mocked_security_groups
@@ -1417,12 +1417,11 @@ class MockBoto3Ec2:
         ip_ranges = IpPermissions.get("IpRanges")
         if isinstance(ip_ranges, list) and ip_ranges:
             cidr_ip = ip_ranges[0].get("CidrIp")
-            description = ip_ranges[0].get("CidrIp")
+            description = ip_ranges[0].get("Description")
         else:
             cidr_ip = ""
             description = ""
         security_group_rule = {
-            "SecurityGroupRuleId": str(uuid.uuid4()),
             "GroupId": GroupId,
             "IsEgress": False,
             "IpProtocol": IpPermissions.get("IpProtocol"),
@@ -1431,7 +1430,6 @@ class MockBoto3Ec2:
             "CidrIpv4": cidr_ip,
             "Description": description
         }
-        security_groups = self.describe_security_groups(self, Filters = [{"Name": "tag:Name", "Values": [security_group_name]}])
         self.put_security_group_rule_for_testing(security_group_name, security_group_rule)
 
     def authorize_security_group_egress(self, GroupId: str, IpPermissions: list) -> None:
