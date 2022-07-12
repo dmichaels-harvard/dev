@@ -1317,11 +1317,36 @@ class MockBoto3Ec2:
                     # The given security group name already has an associated rule
                     # with a security group ID different from the one in the given rule.
                     raise ValueError(f"Mismatched rule GroupId for mocked put_security_group_rule_for_testing.")
-                elif rule["SecurityGroupRuleId"] == security_group_rule_id:
-                    raise ValueError(f"Duplicate rule SecurityGroupRuleId for put_security_group_rule_for_testing.")
-            mocked_security_group["rules"] = [security_group_rule]
+            # Check if this is a rule already exists.
+            for mocked_security_group_rule in mocked_security_group["rules"]:
+                if (mocked_security_group_rule.get("IpProtocol") == security_group_rule.get("IpProtocol")
+                   and mocked_security_group_rule.get("ToPort") == security_group_rule.get("ToPort")
+                   and mocked_security_group_rule.get("FromPort") == security_group_rule.get("FromPort")
+                   and mocked_security_group_rule.get("IsEgress") == security_group_rule.get("IsEgress")
+                   and mocked_security_group_rule.get("CidrIpv4") == security_group_rule.get("CidrIpv4")):
+                    # An error occurred (InvalidPermission.Duplicate) when calling the AuthorizeSecurityGroupIngress operation:
+                    # the specified rule "peer: 0.0.0.0/0, ICMP, type: ALL, code: ALL, ALLOW" already exists
+                    raise ClientError(
+                        operation_name=f"AuthorizeSecurityGroup{'Egress' if security_group_rule.get('IsEgress') else 'Ingress'}",
+                         error_response={
+                              "Error": {"Code": "InvalidPermission.Duplicate", "Message": "the specified rule already exists"}
+                          })
+            mocked_security_group["rules"].append(security_group_rule)
         else:
-            mocked_security_groups.append({ "name": security_group_name, "rules": [security_group_rule] })
+            security_group_id = uuid.uuid4()
+            mocked_security_groups.append(
+                {"name": security_group_name, "id": security_group_id, "rules": [security_group_rule]})
+
+    def put_security_group_for_testing(self, security_group_name: str) -> None:
+        if not security_group_name:
+            raise ValueError(f"Missing name for mocked put_security_group_for_testing.")
+        mocked_security_groups = self._mocked_security_groups()
+        mocked_security_group = [mocked_security_group
+                                 for mocked_security_group in mocked_security_groups
+                                 if mocked_security_group.get("name") == security_group_name]
+        if not mocked_security_group:
+            security_group_id = uuid.uuid4()
+            mocked_security_groups.append({ "name": security_group_name, "id": security_group_id, "rules": [] })
 
     def describe_security_groups(self, Filters: Optional[list] = None) -> dict:  # noQA - Argument names chosen for AWS consistency
         if Filters:
@@ -1367,9 +1392,51 @@ class MockBoto3Ec2:
 
     def authorize_security_group_ingress(self, GroupId: str, IpPermissions: list) -> None:
         # TODO
-        return {"SecurityGroupRules": [] }
+        """
+        FYI: Rules returned by describe_security_groups and describe_security_group_rules look like:
+        { "SecurityGroupRuleId": "sgr-004642a15cf58f9ad",
+          "GroupId": "sg-0561068965d07c4af",
+          "IsEgress": true,
+          "IpProtocol": "icmp",
+          "FromPort": 4,
+          "ToPort": -1,
+          "CidrIpv4": "0.0.0.0/0",
+          "Description": "ICMP for sentieon server",
+          "Tags": [] }
+
+        FYI: Rules passed to authorized_security_group_ingress authorized_security_group_egress look like:
+        { "IpProtocol": "tcp",
+           "FromPort": 8990,
+           "ToPort": 8990,
+           "IpRanges": [{ "CidrIp": sentieon_server_cidr, "Description": "allows comm with sentieon" }] }
+        """
+        if not GroupId:
+            raise ValueError(f"Missing security group ID for mocked authorize_security_group_ingress.")
+        if not IpPermissions:
+            raise ValueError(f"Missing security group rule for mocked authorize_security_group_ingress.")
+        ip_ranges = IpPermissions.get("IpRanges")
+        if isinstance(ip_ranges, list) and ip_ranges:
+            cidr_ip = ip_ranges[0].get("CidrIp")
+            description = ip_ranges[0].get("CidrIp")
+        else:
+            cidr_ip = ""
+            description = ""
+        security_group_rule = {
+            "SecurityGroupRuleId": str(uuid.uuid4()),
+            "GroupId": GroupId,
+            "IsEgress": False,
+            "IpProtocol": IpPermissions.get("IpProtocol"),
+            "FromPort": IpPermissions.get("FromPort"),
+            "ToPort": IpPermissions.get("ToPort"),
+            "CidrIpv4": cidr_ip,
+            "Description": description
+        }
+        security_groups = self.describe_security_groups(self, Filters = [{"Name": "tag:Name", "Values": [security_group_name]}])
+        self.put_security_group_rule_for_testing(security_group_name, security_group_rule)
 
     def authorize_security_group_egress(self, GroupId: str, IpPermissions: list) -> None:
+        if not GroupId:
+            raise ValueError(f"Missing security group ID for mocked authorize_security_group_ingress.")
         # TODO
         return {"SecurityGroupRules": [] }
 
