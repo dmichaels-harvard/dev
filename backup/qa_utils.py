@@ -1260,7 +1260,8 @@ class MockBoto3Ec2:
     def put_security_group_rule_for_testing(self, security_group_name: str, security_group_rule: dict) -> None:
         """
         Define the given security group rule for the given security group name.
-        The given security group rule must contain keys for "GroupId" and "SecurityGroupRuleId".
+        The given security group rule must contain keys for "GroupId".
+        And if the "SecurityGroupRuleId" key is not set one (a UUID) will be generated.
 
         FYI: Rules returned by describe_security_groups and describe_security_group_rules look like:
         { "SecurityGroupRuleId": "sgr-004642a15cf58f9ad",
@@ -1297,7 +1298,7 @@ class MockBoto3Ec2:
         security_group_rule = copy.deepcopy(security_group_rule)
         security_group_rule_id = security_group_rule.get("SecurityGroupRuleId")
         if not security_group_rule_id:
-            security_group_rule["SecurityGroupRuleId"] = str(uuid.uuid4()) + "FOOBAR123"
+            security_group_rule["SecurityGroupRuleId"] = str(uuid.uuid4())
         mocked_security_groups = self._mocked_security_groups()
         mocked_security_group = [mocked_security_group
                                  for mocked_security_group in mocked_security_groups
@@ -1432,13 +1433,21 @@ class MockBoto3Ec2:
     def authorize_security_group_egress(self, GroupId: str, IpPermissions: list) -> None:
         self.authorize_security_group_for_testing(GroupId, IpPermissions, egress=True)
 
-    def revoke_security_group_ingress(self, GroupId: str, IpPermissions: list) -> None:
-        # TODO
-        return
+    def revoke_security_group_for_testing(self, GroupId: str, SecurityGroupRuleIds: list, egress: bool) -> None:
+        if GroupId and SecurityGroupRuleIds:
+            mocked_security_groups = self._mocked_security_groups()
+            for group in mocked_security_groups:
+                if group["id"] == GroupId:
+                    rules = group.get("rules")
+                    for rule_index, rule in enumerate(rules):
+                        if rule.get("IsEgress") == egress and rule["SecurityGroupRuleId"] in SecurityGroupRuleIds:
+                            del rules[rule_index]
 
-    def revoke_security_group_egress(self, GroupId: str, IpPermissions: list) -> None:
-        # TODO
-        return
+    def revoke_security_group_ingress(self, GroupId: str, SecurityGroupRuleIds: list) -> None:
+        self.revoke_security_group_for_testing(GroupId, SecurityGroupRuleIds, egress=False)
+
+    def revoke_security_group_egress(self, GroupId: str, SecurityGroupRuleIds: list) -> None:
+        self.revoke_security_group_for_testing(GroupId, SecurityGroupRuleIds, egress=True)
 
 
 @MockBoto3.register_client(kind='secretsmanager')
