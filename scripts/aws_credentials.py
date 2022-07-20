@@ -60,6 +60,10 @@ env_env_name = os.environ.get("ENV_NAME")
 env_global_env_bucket = os.environ.get("GLOBAL_ENV_BUCKET")
 env_global_bucket_env = os.environ.get("GLOBAL_BUCKET_ENV")
 
+# Get CGAP AWS directory info, e.g.: ~/.aws_test@ -> ~/.aws_test.cgap-supertest
+aws_base_directory = os.path.expanduser("~/.aws_test")
+aws_directory_symlink_target = os.readlink(aws_base_directory) if os.path.islink(aws_base_directory) else None
+
 print()
 print(f"Current active AWS credentials:")
 print(f"- AWS Access Key ID:           {value(access_key_id, False, show, env_access_key_id)}")
@@ -90,3 +94,8 @@ print(f"- ACCOUNT_NUMBER:              {value(env_account_number, False, show, a
 print(f"- GLOBAL_BUCKET_ENV:           {value(env_global_bucket_env, False, show)}")
 print(f"- GLOBAL_ENV_BUCKET:           {value(env_global_env_bucket, False, show)}")
 print()
+
+if aws_directory_symlink_target:
+    print("Current CGAP AWS credentials directory:")
+    print(f"- {value(aws_directory_symlink_target, False, False)}")
+    print()
