@@ -1,4 +1,4 @@
-# Simple utility to print current and environmental AWS related credentials/info.
+# Simple utility to print current and environmental AWS and CGAP related credentials/info.
 
 import boto3
 import json
@@ -53,7 +53,12 @@ env_region_name = env_region if env_region else env_default_region
 env_access_key_id = os.environ.get("AWS_ACCESS_KEY_ID")
 env_secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
 env_session_token = os.environ.get("AWS_SESSION_TOKEN")
+
+# Get environmentally set CGAP related info.
 env_account_number = os.environ.get("ACCOUNT_NUMBER")
+env_env_name = os.environ.get("ENV_NAME")
+env_global_env_bucket = os.environ.get("GLOBAL_ENV_BUCKET")
+env_global_bucket_env = os.environ.get("GLOBAL_BUCKET_ENV")
 
 print()
 print(f"Current active AWS credentials:")
@@ -77,5 +82,11 @@ if session_token or env_session_token:
     print(f"- AWS_SESSION_TOKEN:           {value(env_session_token, True, show, session_token)}")
 print(f"- AWS_SHARED_CREDENTIALS_FILE: {value(env_credentials_file, False, show)}")
 print(f"- AWS_CONFIG_FILE:             {value(env_config_file, False, show)}")
+
+print()
+print(f"Current CGAP related credentials environment variables:")
+print(f"- ENV_NAME:                    {value(env_env_name, False, show)}")
 print(f"- ACCOUNT_NUMBER:              {value(env_account_number, False, show, account_number)}")
+print(f"- GLOBAL_BUCKET_ENV:           {value(env_global_bucket_env, False, show)}")
+print(f"- GLOBAL_ENV_BUCKET:           {value(env_global_env_bucket, False, show)}")
 print()
