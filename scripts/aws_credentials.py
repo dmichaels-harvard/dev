@@ -1,6 +1,7 @@
 # Simple utility to print current and environmental AWS and CGAP related credentials/info.
 
 import boto3
+import io
 import json
 import os
 import sys
@@ -14,12 +15,10 @@ for arg in sys.argv:
 def value(value: str, sensitive: bool, show: bool, match_value: str = None) -> str:
     if not value:
         return '-'
-    display_value = value
+    mismatch = " (mismatch)" if match_value and value != match_value else ""
     if sensitive and not show:
-        display_value = len(value) * "*"
-    if match_value and value != match_value:
-        display_value = value + " (mismatch)"
-    return display_value
+        value = "********"
+    return value + mismatch
 
 # Get active AWS credentials/info.
 
@@ -55,14 +54,28 @@ env_secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
 env_session_token = os.environ.get("AWS_SESSION_TOKEN")
 
 # Get environmentally set CGAP related info.
+
 env_account_number = os.environ.get("ACCOUNT_NUMBER")
 env_env_name = os.environ.get("ENV_NAME")
 env_global_env_bucket = os.environ.get("GLOBAL_ENV_BUCKET")
 env_global_bucket_env = os.environ.get("GLOBAL_BUCKET_ENV")
+env_s3_encrypt_key = os.environ.get("S3_ENCRYPT_KEY")
+env_s3_encrypt_key_id = os.environ.get("S3_ENCRYPT_KEY_ID")
 
 # Get CGAP AWS directory info, e.g.: ~/.aws_test@ -> ~/.aws_test.cgap-supertest
-aws_base_directory = os.path.expanduser("~/.aws_test")
-aws_directory_symlink_target = os.readlink(aws_base_directory) if os.path.islink(aws_base_directory) else None
+
+aws_directory_base = os.path.expanduser("~/.aws_test")
+aws_directory_symlink_target = os.readlink(aws_directory_base) if os.path.islink(aws_directory_base) else None
+aws_directory_s3_encrypt_key_file = ""
+aws_directory_s3_encrypt_key_value = ""
+if os.path.isdir(aws_directory_base):
+    s3_encrypt_key_file = os.path.join(aws_directory_base, "s3_encrypt_key.txt")
+    if os.path.exists(s3_encrypt_key_file):
+        aws_directory_s3_encrypt_key_file = s3_encrypt_key_file
+        with io.open(aws_directory_s3_encrypt_key_file, "r") as aws_directory_s3_encrypt_key_fp:
+            lines = aws_directory_s3_encrypt_key_fp.readlines()
+            if lines:
+                aws_directory_s3_encrypt_key_value = "".join(lines).strip()
 
 print()
 print(f"Current active AWS credentials:")
@@ -91,11 +104,22 @@ print()
 print(f"Current CGAP related credentials environment variables:")
 print(f"- ENV_NAME:                    {value(env_env_name, False, show)}")
 print(f"- ACCOUNT_NUMBER:              {value(env_account_number, False, show, account_number)}")
+print(f"- S3_ENCRYPT_KEY:              {value(env_s3_encrypt_key, True, show, aws_directory_s3_encrypt_key_value)}")
+print(f"- S3_ENCRYPT_KEY_ID:           {value(env_s3_encrypt_key_id, False, show)}")
 print(f"- GLOBAL_BUCKET_ENV:           {value(env_global_bucket_env, False, show)}")
 print(f"- GLOBAL_ENV_BUCKET:           {value(env_global_env_bucket, False, show)}")
 print()
 
-if aws_directory_symlink_target:
-    print("Current CGAP AWS credentials directory:")
-    print(f"- {value(aws_directory_symlink_target, False, False)}")
+s3_encrypt_key_file = os.path.join(aws_directory_base, "s3_encrypt_key.txt")
+if os.path.isdir(aws_directory_base):
+    print("Current CGAP AWS credentials directory info:")
+    if aws_directory_symlink_target:
+        print(f"- {aws_directory_base}@ -> {value(aws_directory_symlink_target, False, False)}")
+    else:
+        print(f"- {aws_directory_base}")
+    if aws_directory_s3_encrypt_key_file:
+        if aws_directory_s3_encrypt_key_value:
+            print(f"- {s3_encrypt_key_file} -> {value(aws_directory_s3_encrypt_key_value, True, show, env_s3_encrypt_key)}")
+        else:
+            print(f"- {s3_encrypt_key_file} -> ?")
     print()
