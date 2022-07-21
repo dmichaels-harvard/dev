@@ -15,6 +15,7 @@
 #             [--vi]
 #             [--quiet]
 #             [--dryrun]
+#             [--verbose]
 #             [--debug]
 #
 # search_string: search pattern to find within files.
@@ -29,6 +30,7 @@
 # --exclude:     list one or more directory names to skip in the search.
 # --vi:          redirects output to temporary file and invokes the vim editor with that.
 # --dryrun:      to just to see the find command that would be run.
+# --verbose:     causes the full path of every file navigated to be printed. 
 # --debug:       turns on any debugging output for troubleshooting.
 # --------------------------------------------------------------------------------------------------
 
@@ -47,6 +49,7 @@ function usage() {
     echo "       [--vi]"
     echo "       [--quiet]"
     echo "       [--dryrun]"
+    echo "       [--verbose]"
     echo "       [--debug]"
     exit 1
 }
@@ -62,6 +65,7 @@ LINE_NUMBERS=
 FIND_FOLLOW_SYMLINKS=
 DRYRUN=
 QUIET=
+VERBOSE=
 DEBUG=
 VIM=
 
@@ -86,9 +90,12 @@ while [ $# -gt 0 ]; do
     elif [ "$1" = "--quiet" -o "$1" = "-quiet" -o "$1" = "--q" -o "$1" = "-q" ]; then
         QUIET=1
         shift 1
-    elif [ "$1" = "--vim" -o "$1" = "-vim" -o "$1" = "--vi" -o "$1" = "-vi" -o "$1" = "--v" -o "$1" = "-v" ]; then
+    elif [ "$1" = "--vim" -o "$1" = "-vim" -o "$1" = "--vi" -o "$1" = "-vi" ]; then
         VIM=1
         QUIET=1
+        shift 1
+    elif [ "$1" = "--verbose" -o "$1" = "-verbose" ]; then
+        VERBOSE='-print'
         shift 1
     elif [ "$1" = "--debug" -o "$1" = "-debug" ]; then
         DEBUG=1
@@ -175,7 +182,7 @@ if [ -z "$SEARCH_FOR"  ]; then
     usage
 fi
 
-COMMAND="find $FIND_FOLLOW_SYMLINKS $DIRECTORY -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP $LIST_FILES_ONLY $TEXT_FILES_ONLY $LINE_NUMBERS -H \"$SEARCH_FOR\" {} \;"
+COMMAND="find $FIND_FOLLOW_SYMLINKS $DIRECTORY $VERBOSE -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP $LIST_FILES_ONLY $TEXT_FILES_ONLY $LINE_NUMBERS -H \"$SEARCH_FOR\" {} \;"
 COMMAND=`echo $COMMAND | tr -s ' '`
 
 if [ ! -z $DEBUG ]; then
