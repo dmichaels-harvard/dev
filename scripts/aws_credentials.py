@@ -61,6 +61,7 @@ env_global_env_bucket = os.environ.get("GLOBAL_ENV_BUCKET")
 env_global_bucket_env = os.environ.get("GLOBAL_BUCKET_ENV")
 env_s3_encrypt_key = os.environ.get("S3_ENCRYPT_KEY")
 env_s3_encrypt_key_id = os.environ.get("S3_ENCRYPT_KEY_ID")
+env_identity = os.environ.get("IDENTITY")
 
 # Get CGAP AWS directory info, e.g.: ~/.aws_test@ -> ~/.aws_test.cgap-supertest
 
@@ -108,6 +109,7 @@ print(f"- S3_ENCRYPT_KEY:              {value(env_s3_encrypt_key, True, show, aw
 print(f"- S3_ENCRYPT_KEY_ID:           {value(env_s3_encrypt_key_id, False, show)}")
 print(f"- GLOBAL_BUCKET_ENV:           {value(env_global_bucket_env, False, show)}")
 print(f"- GLOBAL_ENV_BUCKET:           {value(env_global_env_bucket, False, show)}")
+print(f"- IDENTITY:                    {value(env_identity, False, show)}")
 print()
 
 s3_encrypt_key_file = os.path.join(aws_directory_base, "s3_encrypt_key.txt")
