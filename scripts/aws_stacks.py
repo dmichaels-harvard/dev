@@ -84,6 +84,8 @@ def print_aws_stacks(name: str,
                 if resources and not re.search(resources, stack_resource_name, re.IGNORECASE):
                     continue
                 print("- %s: %s" % (stack_resource_name, stack_resource_type))
+                if verbose:
+                    print("  %s" % (stack_resource.physical_resource_id))
         elif parameters:
             stack_parameters = stack.parameters
             if stack_parameters:
