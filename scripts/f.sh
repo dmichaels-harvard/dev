@@ -5,7 +5,9 @@
 #
 # usage: f.sh search_string
 #             [file_pattern]
-#             [--dir directory_name]
+#             [directory]
+#             [--search search_string]
+#             [--dir directory]
 #             [--text]
 #             [--python]
 #             [--list]
@@ -20,8 +22,10 @@
 #
 # search_string: search pattern to find within files.
 # file_pattern:  find only within files with names matching this.
-# --file:        same as file_pattern.
-# --dir:         find from given directory rather than default current (.) directory.
+# directory:     find from given directory rather than default current (.) directory.
+# --search:      same as search_string (above).
+# --file:        same as file_pattern (above).
+# --dir:         same as directory (above).
 # --text:        turns on grep -I option which skips binary files.
 # --python:      shorthand for file_pattern of '*.py'.
 # --list:        turns on grep -l option to only list file names/paths matched.
@@ -38,7 +42,7 @@ THIS_SCRIPT_NAME=`basename $0`
 
 function usage() {
     echo "usage: ${THIS_SCRIPT_NAME}"
-    echo "       search_string [file_pattern]"
+    echo "       search_string [file_pattern] [directory]"
     echo "       [--dir directory]"
     echo "       [--text]"
     echo "       [--python]"
@@ -57,7 +61,7 @@ function usage() {
 GREP='grep'
 DIRECTORY=.
 TEXT_FILES_ONLY=
-SEARCH_FOR=
+SEARCH_STRING=
 FILE_PATTERN=
 EXCLUDE_DIRS=
 LIST_FILES_ONLY=
@@ -72,19 +76,25 @@ VIM=
 while [ $# -gt 0 ]; do
     if [ "$1" = "--help" -o "$1" = "-help" ]; then
         usage
+    elif [ "$1" = "--search" -o "$1" = "-search" ]; then
+        if [ $# -eq 1 ]; then
+            usage
+        fi
+        SEARCH_STRING=$2
+        shift 2
+    elif [ "$1" = "--files" -o "$1" = "-files" -o "$1" = "--file" -o "$1" = "-file" -o "$1" = "--f" -o "$1" = "-f" ]; then
+        if [ $# -eq 1 ]; then
+            usage
+        fi
+        FILE_PATTERN="-name \"$2\""
+        shift 2
     elif [ "$1" = "--directory" -o "$1" = "-directory" -o "$1" = "--dir" -o "$1" = "-dir" -o "$1" = "--d" -o "$1" = "-d" ]; then
         if [ $# -eq 1 ]; then
             usage
         fi
         DIRECTORY=$2
         shift 2
-    elif [ "$1" = "--file" -o "$1" = "-file" -o "$1" = "--f" -o "$1" = "-f" ]; then
-        if [ $# -eq 1 ]; then
-            usage
-        fi
-        FILE_PATTERN="-name \"$1\""
-        shift 2
-    elif [ "$1" = "--dryrun" -o "$1" = "-dryrun" ]; then
+    elif [ "$1" = "--dryrun" -o "$1" = "-dryrun" -o "$1" = "--dry" -o "$1" = "-dry" ]; then
         DRYRUN=1
         shift 1
     elif [ "$1" = "--quiet" -o "$1" = "-quiet" -o "$1" = "--q" -o "$1" = "-q" ]; then
@@ -138,9 +148,10 @@ while [ $# -gt 0 ]; do
             # collecting directories to exclude, then break out of this.
             #
             if [ "$1" = "--help" -o "$1" = "-help" \
+              -o "$1" = "--search" -o "$1" = "-search" \
               -o "$1" = "--directory" -o "$1" = "-directory" -o "$1" = "--dir" -o "$1" = "-dir" -o "$1" = "--d" -o "$1" = "-d" \
-              -o "$1" = "--file" -o "$1" = "-file" -o "$1" = "--f" -o "$1" = "-f" \
-              -o "$1" = "--dryrun" -o "$1" = "-dryrun" \
+              -o "$1" = "--file" -o "$1" = "-file" -o "$1" = "--file" -o "$1" = "-file" -o "$1" = "--f" -o "$1" = "-f" \
+              -o "$1" = "--dryrun" -o "$1" = "-dryrun" -o "$1" = "--dry" -o "$1" = "-dry" \
               -o "$1" = "--quiet" -o "$1" = "-quiet" -o "$1" = "--q" -o "$1" = "-q" \
               -o "$1" = "--vim" -o "$1" = "-vim" -o "$1" = "--vi" -o "$1" = "-vi" -o "$1" = "--v" -o "$1" = "-v" \
               -o "$1" = "--debug" -o "$1" = "-debug" \
@@ -167,10 +178,12 @@ while [ $# -gt 0 ]; do
             shift 1
         done
     else
-        if [ -z "$SEARCH_FOR" ]; then
-            SEARCH_FOR=$1
+        if [ -z "$SEARCH_STRING" ]; then
+            SEARCH_STRING=$1
         elif [ -z "$FILE_PATTERN" ]; then
             FILE_PATTERN="-name \"$1\""
+        elif [ -z "$DIRECTORY" -o "$DIRECTORY" = "." ]; then
+            DIRECTORY=$1
         else
             usage
         fi
@@ -178,15 +191,15 @@ while [ $# -gt 0 ]; do
     fi
 done
 
-if [ -z "$SEARCH_FOR"  ]; then
+if [ -z "$SEARCH_STRING"  ]; then
     usage
 fi
 
-COMMAND="find $FIND_FOLLOW_SYMLINKS $DIRECTORY $VERBOSE -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP $LIST_FILES_ONLY $TEXT_FILES_ONLY $LINE_NUMBERS -H \"$SEARCH_FOR\" {} \;"
+COMMAND="find $FIND_FOLLOW_SYMLINKS $DIRECTORY $VERBOSE -type f $EXCLUDE_DIRS $FILE_PATTERN -exec $GREP $LIST_FILES_ONLY $TEXT_FILES_ONLY $LINE_NUMBERS -H \"$SEARCH_STRING\" {} \;"
 COMMAND=`echo $COMMAND | tr -s ' '`
 
 if [ ! -z $DEBUG ]; then
-    echo "SEARCH_FOR:[${SEARCH_FOR}]"
+    echo "SEARCH_STRING:[${SEARCH_STRING}]"
     echo "FILE_PATTERN:[${FILE_PATTERN}]"
     echo "EXCLUDE_DIRS:[${EXCLUDE_DIRS}]"
     echo "TEXT_FILES_ONLY:[${TEXT_FILES_ONLY}]"
