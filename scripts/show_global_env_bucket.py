@@ -1,0 +1,2 @@
+from dcicutils.env_scripts import show_global_env_bucket_main
+show_global_env_bucket_main()
