@@ -1,1 +1,3 @@
-python ../scripts/show_global_env_bucket.py
+#!/bin/bash
+THIS_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+python $THIS_DIR/../scripts/show_global_env_bucket.py
